@@ -1,0 +1,38 @@
+# Config file for MegaMan 64 Recompilation.
+
+[input]
+entrypoint = 0x80025C00
+# Paths are relative to the location of this config file.
+output_func_path = "RecompiledFuncs"
+symbols_file_path = "MegaMan64RecompSyms/megaman64.us.rev1.syms.toml"
+rom_file_path = "megaman64.us.z64"
+
+manual_funcs = [
+]
+
+[patches]
+stubs = [
+	"func_80092EB0_6E2B0", # Stub function that checks RSP status?
+	"Graph_ThreadStop", # Function that stops the graphics thread
+	"func_80087590_62990" # Function that starts the graphics thread
+]
+
+ignored = [
+]
+
+# Hooks
+[[patches.hook]]
+before_vram = 0x80027404
+func = "Overlay_Loader"
+text = "load_overlays(ctx->r18, ctx->r16, ctx->r17);"
+
+[[patches.hook]]
+func = "func_8008A02C_6542C"
+text = "yield_self(rdram);"
+before_vram = 0x8008A0E8
+
+[[patches.instruction]]
+#Reduce Fog thickness
+func = "func_800276EC_2AEC"
+vram = 0x80027C68
+value = 0x34841400 # ori $a0, $a0, 0xF400
