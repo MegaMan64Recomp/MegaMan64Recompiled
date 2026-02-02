@@ -13,7 +13,8 @@ manual_funcs = [
 stubs = [
 	"func_80092EB0_6E2B0", # Stub function that checks RSP status?
 	"Graph_ThreadStop", # Function that stops the graphics thread
-	"func_80087590_62990" # Function that starts the graphics thread
+	"func_80087590_62990", # Function that starts the graphics thread
+	"func_80031F0C_D30C" # Model LOD
 ]
 
 ignored = [
@@ -49,7 +50,6 @@ text = """
 func = "func_800276EC_2AEC"
 vram = 0x80027798
 value = 0x24620018 # addiu $v0 ,$v1 ,0x18
-
 
 ##Reduce Fog thickness
 #[[patches.instruction]]

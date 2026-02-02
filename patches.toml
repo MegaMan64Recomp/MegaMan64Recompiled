@@ -17,6 +17,8 @@ data_reference_syms_files = [ "MegaMan64RecompSyms/megaman64.us.rev1.datasyms.to
 # Tell the recompiler to write the output binary. Doing this instead of using objcopy allows the recompiler to patch MIPS32 relocs.
 output_binary_path = "patches/patches.bin"
 
+allow_exports = true
+
 # Do not emit warnings for unpaired LO16 values, as clang produces many of them.
 unpaired_lo16_warnings = false
 

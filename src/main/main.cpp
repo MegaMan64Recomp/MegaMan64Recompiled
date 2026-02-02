@@ -18,6 +18,13 @@
 #else
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
+// Undefine x11 macros that get included by SDL_syswm.h.
+#undef None
+#undef Status
+#undef LockMask
+#undef ControlMask
+#undef Success
+#undef Always
 #endif
 
 #include "recomp_ui.h"
@@ -27,6 +34,7 @@
 #include "zelda_render.h"
 #include "zelda_support.h"
 #include "zelda_game.h"
+#include "recomp_data.h"
 #include "ovl_patches.hpp"
 #include "librecomp/game.hpp"
 #include "librecomp/mods.hpp"
@@ -40,6 +48,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <timeapi.h>
 #include "SDL_syswm.h"
 #endif
 
@@ -540,13 +549,15 @@ void release_preload(PreloadContext& context) {
 #endif
 
 void enable_texture_pack(recomp::mods::ModContext& context, const recomp::mods::ModHandle& mod) {
-    (void)context;
-    zelda64::renderer::enable_texture_pack(mod);
+    zelda64::renderer::enable_texture_pack(context, mod);
 }
 
-void disable_texture_pack(recomp::mods::ModContext& context, const recomp::mods::ModHandle& mod) {
-    (void)context;
+void disable_texture_pack(recomp::mods::ModContext&, const recomp::mods::ModHandle& mod) {
     zelda64::renderer::disable_texture_pack(mod);
+}
+
+void reorder_texture_pack(recomp::mods::ModContext&) {
+    zelda64::renderer::trigger_texture_pack_update();
 }
 
 #define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
@@ -570,6 +581,26 @@ int main(int argc, char** argv) {
     }
 
 #ifdef _WIN32
+    // Set up high resolution timing period.
+    timeBeginPeriod(1);
+
+    // Process arguments.
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--show-console") == 0)
+        {
+            if (GetConsoleWindow() == nullptr)
+            {
+                AllocConsole();
+                freopen("CONIN$", "r", stdin);
+                freopen("CONOUT$", "w", stderr);
+                freopen("CONOUT$", "w", stdout);
+            }
+
+            break;
+        }
+    }
+
     // Set up console output to accept UTF-8 on windows
     SetConsoleOutputCP(CP_UTF8);
 
@@ -592,7 +623,14 @@ int main(int argc, char** argv) {
     // Force wasapi on Windows, as there seems to be some issue with sample queueing with directsound currently.
     SDL_setenv("SDL_AUDIODRIVER", "wasapi", true);
 #endif
-    //printf("Current dir: %ls\n", std::filesystem::current_path().c_str());
+
+#if defined(__linux__) && defined(RECOMP_FLATPAK)
+    // When using Flatpak, applications tend to launch from the home directory by default.
+    // Mods might use the current working directory to store the data, so we switch it to a directory
+    // with persistent data storage and write permissions under Flatpak to ensure it works.
+    std::error_code ec;
+    std::filesystem::current_path("/var/data", ec);
+#endif
 
     // Initialize SDL audio and set the output frequency.
     SDL_InitSubSystem(SDL_INIT_AUDIO);
@@ -610,7 +648,7 @@ int main(int argc, char** argv) {
         recomp::register_game(game);
     }
 
-    //REGISTER_FUNC(recomp_get_window_resolution);
+    REGISTER_FUNC(recomp_get_window_resolution);
     //REGISTER_FUNC(recomp_get_target_aspect_ratio);
     //REGISTER_FUNC(recomp_get_target_framerate);
     //REGISTER_FUNC(recomp_get_autosave_enabled);
@@ -625,7 +663,8 @@ int main(int argc, char** argv) {
     //REGISTER_FUNC(recomp_get_analog_inverted_axes);
 
     zelda64::register_overlays();
- //   zelda64::register_patches();
+    zelda64::register_patches();
+    recomputil::register_data_api_exports();
     zelda64::load_config();
 
     recomp::rsp::callbacks_t rsp_callbacks{
@@ -725,6 +764,11 @@ int main(int argc, char** argv) {
     if (preloaded) {
         release_preload(preload_context);
     }
+
+#ifdef _WIN32
+    // End high resolution timing period.
+    timeEndPeriod(1);
+#endif
 
     return EXIT_SUCCESS;
 }

@@ -3,7 +3,7 @@
 
 namespace zelda64 {
     void register_overlays();
-//    void register_patches();
+    void register_patches();
 }
 
 #endif

@@ -24,15 +24,15 @@ namespace zelda64 {
     bool get_debug_mode_enabled();
     void set_debug_mode_enabled(bool enabled);
     
-    enum class AutosaveMode {
+    enum class FilmGrainMode {
         On,
         Off,
         OptionCount
     };
 
-    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::AutosaveMode, {
-        {zelda64::AutosaveMode::On, "On"},
-        {zelda64::AutosaveMode::Off, "Off"}
+    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::FilmGrainMode, {
+        {zelda64::FilmGrainMode::On, "On"},
+        {zelda64::FilmGrainMode::Off, "Off"}
     });
 
     enum class TargetingMode {
@@ -49,26 +49,33 @@ namespace zelda64 {
     TargetingMode get_targeting_mode();
     void set_targeting_mode(TargetingMode mode);
 
-    enum class CameraInvertMode {
-        InvertNone,
-        InvertX,
-        InvertY,
-        InvertBoth,
+    enum class AimInvertMode {
+        On,
+        Off,
         OptionCount
     };
 
-    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::CameraInvertMode, {
-        {zelda64::CameraInvertMode::InvertNone, "InvertNone"},
-        {zelda64::CameraInvertMode::InvertX, "InvertX"},
-        {zelda64::CameraInvertMode::InvertY, "InvertY"},
-        {zelda64::CameraInvertMode::InvertBoth, "InvertBoth"}
+    enum class RadioBoxMode {
+        Expand,
+        Original,
+        OptionCount
+    };
+
+    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::RadioBoxMode, {
+        {zelda64::RadioBoxMode::Expand, "Expand"},
+        {zelda64::RadioBoxMode::Original, "Original"}
     });
 
-    CameraInvertMode get_camera_invert_mode();
-    void set_camera_invert_mode(CameraInvertMode mode);
+    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::AimInvertMode, {
+        {zelda64::AimInvertMode::On, "On"},
+        {zelda64::AimInvertMode::Off, "Off"},
+    });
 
-    CameraInvertMode get_analog_camera_invert_mode();
-    void set_analog_camera_invert_mode(CameraInvertMode mode);
+    RadioBoxMode get_radio_comm_box_mode();
+    void set_radio_comm_box_mode(RadioBoxMode mode);
+
+    AimInvertMode get_analog_camera_invert_mode();
+    void set_analog_camera_invert_mode(AimInvertMode mode);
 
     enum class AnalogCamMode {
         On,
@@ -81,11 +88,11 @@ namespace zelda64 {
         {zelda64::AnalogCamMode::Off, "Off"}
     });
 
-    AutosaveMode get_autosave_mode();
-    void set_autosave_mode(AutosaveMode mode);
+    FilmGrainMode get_film_grain_mode();
+    void set_film_grain_mode(FilmGrainMode mode);
 
-    AnalogCamMode get_analog_cam_mode();
-    void set_analog_cam_mode(AnalogCamMode mode);
+    AimInvertMode get_invert_y_axis_mode();
+    void set_invert_y_axis_mode(AimInvertMode mode);
 
     void open_quit_game_prompt();
 };

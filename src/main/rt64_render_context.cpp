@@ -1,10 +1,12 @@
 #include <memory>
 #include <cstring>
 #include <variant>
+#include <algorithm>
 
 #define HLSL_CPU
 #include "hle/rt64_application.h"
 #include "rt64_render_hooks.h"
+#include "overloaded.h"
 
 #include "ultramodern/ultramodern.hpp"
 #include "ultramodern/config.hpp"
@@ -12,12 +14,6 @@
 #include "zelda_render.h"
 #include "recomp_ui.h"
 #include "concurrentqueue.h"
-
-// Helper class for variant visiting.
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
 
 static RT64::UserConfiguration::Antialiasing device_max_msaa = RT64::UserConfiguration::Antialiasing::None;
 static bool sample_positions_supported = false;
@@ -27,14 +23,25 @@ static uint8_t DMEM[0x1000];
 static uint8_t IMEM[0x1000];
 
 struct TexturePackEnableAction {
-    std::filesystem::path path;
+    std::string mod_id;
 };
 
 struct TexturePackDisableAction {
-    std::filesystem::path path;
+    std::string mod_id;
 };
 
-using TexturePackAction = std::variant<TexturePackEnableAction, TexturePackDisableAction>;
+struct TexturePackSecondaryEnableAction {
+    std::string mod_id;
+};
+
+struct TexturePackSecondaryDisableAction {
+    std::string mod_id;
+};
+
+struct TexturePackUpdateAction {
+};
+
+using TexturePackAction = std::variant<TexturePackEnableAction, TexturePackDisableAction, TexturePackSecondaryEnableAction, TexturePackSecondaryDisableAction, TexturePackUpdateAction>;
 
 static moodycamel::ConcurrentQueue<TexturePackAction> texture_pack_action_queue;
 
@@ -49,27 +56,12 @@ unsigned int DPC_BUFBUSY_REG = 0;
 unsigned int DPC_PIPEBUSY_REG = 0;
 unsigned int DPC_TMEM_REG = 0;
 
-unsigned int VI_STATUS_REG = 0;
-unsigned int VI_ORIGIN_REG = 0;
-unsigned int VI_WIDTH_REG = 0;
-unsigned int VI_INTR_REG = 0;
-unsigned int VI_V_CURRENT_LINE_REG = 0;
-unsigned int VI_TIMING_REG = 0;
-unsigned int VI_V_SYNC_REG = 0;
-unsigned int VI_H_SYNC_REG = 0;
-unsigned int VI_LEAP_REG = 0;
-unsigned int VI_H_START_REG = 0;
-unsigned int VI_V_START_REG = 0;
-unsigned int VI_V_BURST_REG = 0;
-unsigned int VI_X_SCALE_REG = 0;
-unsigned int VI_Y_SCALE_REG = 0;
-
 void dummy_check_interrupts() {}
 
-RT64::UserConfiguration::Antialiasing compute_max_supported_aa(RT64::RenderSampleCounts bits) {
-    if (bits & RT64::RenderSampleCount::Bits::COUNT_2) {
-        if (bits & RT64::RenderSampleCount::Bits::COUNT_4) {
-            if (bits & RT64::RenderSampleCount::Bits::COUNT_8) {
+RT64::UserConfiguration::Antialiasing compute_max_supported_aa(plume::RenderSampleCounts bits) {
+    if (bits & plume::RenderSampleCount::Bits::COUNT_2) {
+        if (bits & plume::RenderSampleCount::Bits::COUNT_4) {
+            if (bits & plume::RenderSampleCount::Bits::COUNT_8) {
                 return RT64::UserConfiguration::Antialiasing::MSAA8X;
             }
             return RT64::UserConfiguration::Antialiasing::MSAA4X;
@@ -171,6 +163,7 @@ void set_application_user_config(RT64::Application* application, const ultramode
     application->userConfig.refreshRate = to_rt64(config.rr_option);
     application->userConfig.refreshRateTarget = config.rr_manual_value;
     application->userConfig.internalColorFormat = to_rt64(config.hpfb_option);
+    application->userConfig.displayBuffering = RT64::UserConfiguration::DisplayBuffering::Triple;
 }
 
 ultramodern::renderer::SetupResult map_setup_result(RT64::Application::SetupResult rt64_result) {
@@ -188,6 +181,23 @@ ultramodern::renderer::SetupResult map_setup_result(RT64::Application::SetupResu
     }
 
     fprintf(stderr, "Unhandled `RT64::Application::SetupResult` ?\n");
+    assert(false);
+    std::exit(EXIT_FAILURE);
+}
+
+ultramodern::renderer::GraphicsApi map_graphics_api(RT64::UserConfiguration::GraphicsAPI api) {
+    switch (api) {
+        case RT64::UserConfiguration::GraphicsAPI::D3D12:
+            return ultramodern::renderer::GraphicsApi::D3D12;
+        case RT64::UserConfiguration::GraphicsAPI::Vulkan:
+            return ultramodern::renderer::GraphicsApi::Vulkan;
+        case RT64::UserConfiguration::GraphicsAPI::Metal:
+            return ultramodern::renderer::GraphicsApi::Metal;
+        case RT64::UserConfiguration::GraphicsAPI::Automatic:
+            return ultramodern::renderer::GraphicsApi::Auto;
+    }
+
+    fprintf(stderr, "Unhandled `RT64::UserConfiguration::GraphicsAPI` ?\n");
     assert(false);
     std::exit(EXIT_FAILURE);
 }
@@ -225,20 +235,22 @@ zelda64::renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::rendere
     appCore.DPC_PIPEBUSY_REG = &DPC_PIPEBUSY_REG;
     appCore.DPC_TMEM_REG = &DPC_TMEM_REG;
 
-    appCore.VI_STATUS_REG = &VI_STATUS_REG;
-    appCore.VI_ORIGIN_REG = &VI_ORIGIN_REG;
-    appCore.VI_WIDTH_REG = &VI_WIDTH_REG;
-    appCore.VI_INTR_REG = &VI_INTR_REG;
-    appCore.VI_V_CURRENT_LINE_REG = &VI_V_CURRENT_LINE_REG;
-    appCore.VI_TIMING_REG = &VI_TIMING_REG;
-    appCore.VI_V_SYNC_REG = &VI_V_SYNC_REG;
-    appCore.VI_H_SYNC_REG = &VI_H_SYNC_REG;
-    appCore.VI_LEAP_REG = &VI_LEAP_REG;
-    appCore.VI_H_START_REG = &VI_H_START_REG;
-    appCore.VI_V_START_REG = &VI_V_START_REG;
-    appCore.VI_V_BURST_REG = &VI_V_BURST_REG;
-    appCore.VI_X_SCALE_REG = &VI_X_SCALE_REG;
-    appCore.VI_Y_SCALE_REG = &VI_Y_SCALE_REG;
+    ultramodern::renderer::ViRegs* vi_regs = ultramodern::renderer::get_vi_regs();
+
+    appCore.VI_STATUS_REG = &vi_regs->VI_STATUS_REG;
+    appCore.VI_ORIGIN_REG = &vi_regs->VI_ORIGIN_REG;
+    appCore.VI_WIDTH_REG = &vi_regs->VI_WIDTH_REG;
+    appCore.VI_INTR_REG = &vi_regs->VI_INTR_REG;
+    appCore.VI_V_CURRENT_LINE_REG = &vi_regs->VI_V_CURRENT_LINE_REG;
+    appCore.VI_TIMING_REG = &vi_regs->VI_TIMING_REG;
+    appCore.VI_V_SYNC_REG = &vi_regs->VI_V_SYNC_REG;
+    appCore.VI_H_SYNC_REG = &vi_regs->VI_H_SYNC_REG;
+    appCore.VI_LEAP_REG = &vi_regs->VI_LEAP_REG;
+    appCore.VI_H_START_REG = &vi_regs->VI_H_START_REG;
+    appCore.VI_V_START_REG = &vi_regs->VI_V_START_REG;
+    appCore.VI_V_BURST_REG = &vi_regs->VI_V_BURST_REG;
+    appCore.VI_X_SCALE_REG = &vi_regs->VI_X_SCALE_REG;
+    appCore.VI_Y_SCALE_REG = &vi_regs->VI_Y_SCALE_REG;
 
     // Set up the RT64 application configuration fields.
     RT64::ApplicationConfiguration appConfig;
@@ -266,9 +278,8 @@ zelda64::renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::rendere
         case ultramodern::renderer::GraphicsApi::Metal:
             app->userConfig.graphicsAPI = RT64::UserConfiguration::GraphicsAPI::Metal;
             break;
-        default:
         case ultramodern::renderer::GraphicsApi::Auto:
-            // Don't override if auto is selected.
+            app->userConfig.graphicsAPI = RT64::UserConfiguration::GraphicsAPI::Automatic;
             break;
     }
 
@@ -278,6 +289,8 @@ zelda64::renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::rendere
     thread_id = window_handle.thread_id;
 #endif
     setup_result = map_setup_result(app->setup(thread_id));
+    // Get the API that RT64 chose.
+    chosen_api = map_graphics_api(app->chosenGraphicsAPI);
     if (setup_result != ultramodern::renderer::SetupResult::Success) {
         app = nullptr;
         return;
@@ -289,9 +302,9 @@ zelda64::renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::rendere
     // Check if the selected device actually supports MSAA sample positions and MSAA for for the formats that will be used
     // and downgrade the configuration accordingly.
     if (app->device->getCapabilities().sampleLocations) {
-        RT64::RenderSampleCounts color_sample_counts = app->device->getSampleCountsSupported(RT64::RenderFormat::R8G8B8A8_UNORM);
-        RT64::RenderSampleCounts depth_sample_counts = app->device->getSampleCountsSupported(RT64::RenderFormat::D32_FLOAT);
-        RT64::RenderSampleCounts common_sample_counts = color_sample_counts & depth_sample_counts;
+        plume::RenderSampleCounts color_sample_counts = app->device->getSampleCountsSupported(plume::RenderFormat::R8G8B8A8_UNORM);
+        plume::RenderSampleCounts depth_sample_counts = app->device->getSampleCountsSupported(plume::RenderFormat::D32_FLOAT);
+        plume::RenderSampleCounts common_sample_counts = color_sample_counts & depth_sample_counts;
         device_max_msaa = compute_max_supported_aa(common_sample_counts);
         sample_positions_supported = true;
     }
@@ -306,40 +319,13 @@ zelda64::renderer::RT64Context::RT64Context(uint8_t* rdram, ultramodern::rendere
 zelda64::renderer::RT64Context::~RT64Context() = default;
 
 void zelda64::renderer::RT64Context::send_dl(const OSTask* task) {
-    bool packs_disabled = false;
-    TexturePackAction cur_action;
-    while (texture_pack_action_queue.try_dequeue(cur_action)) {
-        std::visit(overloaded{
-            [&](TexturePackDisableAction& to_disable) {
-                enabled_texture_packs.erase(to_disable.path);
-                packs_disabled = true;
-            },
-            [&](TexturePackEnableAction& to_enable) {
-                enabled_texture_packs.insert(to_enable.path);
-                // Load the pack now if no packs have been disabled.
-                if (!packs_disabled) {
-                    app->textureCache->loadReplacementDirectory(to_enable.path);
-                }
-            }
-        }, cur_action);
-    }
-
-    // If any packs were disabled, unload all packs and load all the active ones.
-    if (packs_disabled) {
-        app->textureCache->clearReplacementDirectories();
-        for (const std::filesystem::path& cur_pack_path : enabled_texture_packs) {
-            app->textureCache->loadReplacementDirectory(cur_pack_path);
-        }
-    }
-
+    check_texture_pack_actions();
     app->state->rsp->reset();
     app->interpreter->loadUCodeGBI(task->t.ucode & 0x3FFFFFF, task->t.ucode_data & 0x3FFFFFF, true);
     app->processDisplayLists(app->core.RDRAM, task->t.data_ptr & 0x3FFFFFF, 0, true);
 }
 
-void zelda64::renderer::RT64Context::update_screen(uint32_t vi_origin) {
-    VI_ORIGIN_REG = vi_origin;
-
+void zelda64::renderer::RT64Context::update_screen() {
     app->updateScreen();
 }
 
@@ -397,6 +383,66 @@ float zelda64::renderer::RT64Context::get_resolution_scale() const {
     }
 }
 
+void zelda64::renderer::RT64Context::check_texture_pack_actions() {
+    bool packs_changed = false;
+    TexturePackAction cur_action;
+    while (texture_pack_action_queue.try_dequeue(cur_action)) {
+        std::visit(overloaded{
+            [&](TexturePackDisableAction &to_disable) {
+                enabled_texture_packs.erase(to_disable.mod_id);
+                packs_changed = true;
+            },
+            [&](TexturePackEnableAction &to_enable) {
+                enabled_texture_packs.insert(to_enable.mod_id);
+                packs_changed = true;
+            },
+            [&](TexturePackSecondaryDisableAction &to_override_disable) {
+                secondary_disabled_texture_packs.insert(to_override_disable.mod_id);
+                packs_changed = true;
+            },
+            [&](TexturePackSecondaryEnableAction &to_override_enable) {
+                secondary_disabled_texture_packs.erase(to_override_enable.mod_id);
+                packs_changed = true;
+            },
+            [&](TexturePackUpdateAction &) {
+                packs_changed = true;
+            }
+        }, cur_action);
+    }
+
+    // If any packs were disabled, unload all packs and load all the active ones.
+    if (packs_changed) {
+        // Sort the enabled texture packs in reverse order so that earlier ones override later ones.
+        std::vector<std::string> sorted_texture_packs{};
+        sorted_texture_packs.reserve(enabled_texture_packs.size());
+        for (const std::string& mod : enabled_texture_packs) {
+            if (!secondary_disabled_texture_packs.contains(mod)) {
+                sorted_texture_packs.emplace_back(mod);
+            }
+        }
+
+        std::sort(sorted_texture_packs.begin(), sorted_texture_packs.end(),
+            [](const std::string& lhs, const std::string& rhs) {
+                return recomp::mods::get_mod_order_index(lhs) > recomp::mods::get_mod_order_index(rhs);
+            }
+        );
+
+        // Build the path list from the sorted mod list.
+        std::vector<RT64::ReplacementDirectory> replacement_directories;
+        replacement_directories.reserve(enabled_texture_packs.size());
+        for (const std::string &mod_id : sorted_texture_packs) {
+            replacement_directories.emplace_back(RT64::ReplacementDirectory(recomp::mods::get_mod_filename(mod_id)));
+        }
+
+        if (!replacement_directories.empty()) {
+            app->textureCache->loadReplacementDirectories(replacement_directories);
+        }
+        else {
+            app->textureCache->clearReplacementDirectories();
+        }
+    }
+}
+
 RT64::UserConfiguration::Antialiasing zelda64::renderer::RT64MaxMSAA() {
     return device_max_msaa;
 }
@@ -413,10 +459,72 @@ bool zelda64::renderer::RT64HighPrecisionFBEnabled() {
     return high_precision_fb_enabled;
 }
 
-void zelda64::renderer::enable_texture_pack(const recomp::mods::ModHandle& mod) {
-    texture_pack_action_queue.enqueue(TexturePackEnableAction{mod.manifest.mod_root_path});
+void zelda64::renderer::trigger_texture_pack_update() {
+    texture_pack_action_queue.enqueue(TexturePackUpdateAction{});
+}
+
+void zelda64::renderer::enable_texture_pack(const recomp::mods::ModContext& context, const recomp::mods::ModHandle& mod) {
+    texture_pack_action_queue.enqueue(TexturePackEnableAction{mod.manifest.mod_id});
+
+    // Check for the texture pack enabled config option.
+    const recomp::mods::ConfigSchema& config_schema = context.get_mod_config_schema(mod.manifest.mod_id);
+    auto find_it = config_schema.options_by_id.find(zelda64::renderer::special_option_texture_pack_enabled);
+    if (find_it != config_schema.options_by_id.end()) {
+        const recomp::mods::ConfigOption& config_option = config_schema.options[find_it->second];
+
+        if (is_texture_pack_enable_config_option(config_option, false)) {
+            recomp::mods::ConfigValueVariant value_variant = context.get_mod_config_value(mod.manifest.mod_id, config_option.id);
+            uint32_t value;
+            if (uint32_t* value_ptr = std::get_if<uint32_t>(&value_variant)) {
+                value = *value_ptr;
+            }
+            else {
+                value = 0;
+            }
+
+            if (value) {
+                zelda64::renderer::secondary_enable_texture_pack(mod.manifest.mod_id);
+            }
+            else {
+                zelda64::renderer::secondary_disable_texture_pack(mod.manifest.mod_id);
+            }
+        }
+    }
 }
 
 void zelda64::renderer::disable_texture_pack(const recomp::mods::ModHandle& mod) {
-    texture_pack_action_queue.enqueue(TexturePackDisableAction{mod.manifest.mod_root_path});
+    texture_pack_action_queue.enqueue(TexturePackDisableAction{mod.manifest.mod_id});
+}
+
+void zelda64::renderer::secondary_enable_texture_pack(const std::string& mod_id) {
+    texture_pack_action_queue.enqueue(TexturePackSecondaryEnableAction{mod_id});
+}
+
+void zelda64::renderer::secondary_disable_texture_pack(const std::string& mod_id) {
+    texture_pack_action_queue.enqueue(TexturePackSecondaryDisableAction{mod_id});
+}
+
+
+// HD texture enable option. Must be an enum with two options.
+// The first option is treated as disabled and the second option is treated as enabled.
+bool zelda64::renderer::is_texture_pack_enable_config_option(const recomp::mods::ConfigOption& option, bool show_errors) {
+    if (option.id == zelda64::renderer::special_option_texture_pack_enabled) {
+        if (option.type != recomp::mods::ConfigOptionType::Enum) {
+            if (show_errors) {
+                recompui::message_box(("Mod has the special config option id for enabling an HD texture pack (\"" + zelda64::renderer::special_option_texture_pack_enabled + "\"), but the config option is not an enum.").c_str());
+            }
+            return false;
+        }
+
+        const recomp::mods::ConfigOptionEnum &option_enum = std::get<recomp::mods::ConfigOptionEnum>(option.variant);
+        if (option_enum.options.size() != 2) {
+            if (show_errors) {
+                recompui::message_box(("Mod has the special config option id for enabling an HD texture pack (\"" + zelda64::renderer::special_option_texture_pack_enabled + "\"), but the config option doesn't have exactly 2 values.").c_str());
+            }
+            return false;
+        }
+
+        return true;
+    }
+    return false;
 }

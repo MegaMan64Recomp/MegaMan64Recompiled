@@ -4,6 +4,11 @@
 #define RECOMP_EXPORT __attribute__((section(".recomp_export")))
 #define RECOMP_PATCH __attribute__((section(".recomp_patch")))
 #define RECOMP_FORCE_PATCH __attribute__((section(".recomp_force_patch")))
+#define RECOMP_DECLARE_EVENT(func) \
+_Pragma("GCC diagnostic push") \
+_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
+__attribute__((noinline, weak, used, section(".recomp_event"))) void func {} \
+_Pragma("GCC diagnostic pop")
 
 // TODO fix renaming symbols in patch recompilation
 #define osCreateMesgQueue osCreateMesgQueue_recomp
@@ -25,9 +30,12 @@
 #define cosf __cosf_recomp
 #define bzero bzero_recomp
 #define gRandFloat sRandFloat
-// #include "global.h"
-#include <ultra64.h>
+#include "sys.h"
+#include "global.h"
+#include "PR/ultratypes.h"
 #include "rt64_extended_gbi.h"
+#include "functions.h"
+#include "patch_helpers.h"
 
 #ifndef gEXFillRectangle
 #define gEXFillRectangle(cmd, lorigin, rorigin, ulx, uly, lrx, lry) \
@@ -66,6 +74,7 @@
 
 
 int recomp_printf(const char* fmt, ...);
+void Update_UI_Alignments();
 
 #define INCBIN(identifier, filename)          \
     asm(".pushsection .rodata\n"              \
@@ -80,5 +89,33 @@ int recomp_printf(const char* fmt, ...);
     extern u8 identifier[]
 
 void recomp_crash(const char* err);
+
+typedef unsigned long collection_key_t;
+
+typedef unsigned long U32ValueHashmapHandle;
+
+U32ValueHashmapHandle recomputil_create_u32_value_hashmap();
+int recomputil_u32_value_hashmap_insert(U32ValueHashmapHandle, collection_key_t, unsigned long);
+int recomputil_u32_value_hashmap_get(U32ValueHashmapHandle, collection_key_t, unsigned long*);
+int recomputil_u32_value_hashmap_erase(U32ValueHashmapHandle, collection_key_t);
+
+
+DECLARE_FUNC(U32ValueHashmapHandle, recomputil_create_u32_value_hashmap, void);
+DECLARE_FUNC(void, recomputil_destroy_u32_value_hashmap, U32ValueHashmapHandle handle);
+DECLARE_FUNC(int, recomputil_u32_value_hashmap_contains, U32ValueHashmapHandle handle, collection_key_t key);
+DECLARE_FUNC(int, recomputil_u32_value_hashmap_insert, U32ValueHashmapHandle handle, collection_key_t key, unsigned long value);
+DECLARE_FUNC(int, recomputil_u32_value_hashmap_get, U32ValueHashmapHandle handle, collection_key_t key, unsigned long* out);
+DECLARE_FUNC(int, recomputil_u32_value_hashmap_erase, U32ValueHashmapHandle handle, collection_key_t key);
+DECLARE_FUNC(unsigned long, recomputil_u32_value_hashmap_size, U32ValueHashmapHandle handle);
+
+typedef unsigned long U32MemoryHashmapHandle;
+
+// DECLARE_FUNC(U32MemoryHashmapHandle, recomputil_create_u32_memory_hashmap, unsigned long element_size);
+// DECLARE_FUNC(void, recomputil_destroy_u32_memory_hashmap, U32MemoryHashmapHandle handle);
+// DECLARE_FUNC(int, recomputil_u32_memory_hashmap_contains, U32MemoryHashmapHandle handle, collection_key_t key);
+// DECLARE_FUNC(int, recomputil_u32_memory_hashmap_create, U32MemoryHashmapHandle handle, collection_key_t key);
+// DECLARE_FUNC(void*, recomputil_u32_memory_hashmap_get, U32MemoryHashmapHandle handle, collection_key_t key);
+// DECLARE_FUNC(int, recomputil_u32_memory_hashmap_erase, U32MemoryHashmapHandle handle, collection_key_t key);
+// DECLARE_FUNC(unsigned long, recomputil_u32_memory_hashmap_size, U32MemoryHashmapHandle handle);
 
 #endif
