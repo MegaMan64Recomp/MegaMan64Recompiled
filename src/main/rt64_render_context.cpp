@@ -402,7 +402,12 @@ RT64::UserConfiguration::Antialiasing zelda64::renderer::RT64MaxMSAA() {
 }
 
 std::unique_ptr<ultramodern::renderer::RendererContext> zelda64::renderer::create_render_context(uint8_t* rdram, ultramodern::renderer::WindowHandle window_handle, bool developer_mode) {
-    return std::make_unique<zelda64::renderer::RT64Context>(rdram, window_handle, developer_mode);
+    auto context = std::make_unique<zelda64::renderer::RT64Context>(rdram, window_handle, developer_mode);
+    if (!context->valid()) {
+        fprintf(stderr, "Failed to initialize the graphics renderer. "
+                "Ensure your GPU drivers are up to date and that Vulkan or D3D12 is supported.\n");
+    }
+    return context;
 }
 
 bool zelda64::renderer::RT64SamplePositionsSupported() {

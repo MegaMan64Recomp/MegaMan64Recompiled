@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cassert>
+#include <cstring>
 #include <unordered_map>
 #include <vector>
 #include <array>
@@ -43,16 +44,21 @@
 #include "SDL_syswm.h"
 #endif
 
-#include "../../lib/rt64/src/contrib/stb/stb_image.h"
-
 const std::string version_string = "1.0.0-alpha";
 
 template<typename... Ts>
 void exit_error(const char* str, Ts ...args) {
-    // TODO pop up an error
-    fprintf(stderr, str, args...);
+    char error_message[2048];
+    int written = snprintf(error_message, sizeof(error_message), str, args...);
+    // Append a truncation marker if the message was too long to fit.
+    if (written >= static_cast<int>(sizeof(error_message))) {
+        constexpr const char truncation_marker[] = "...[truncated]";
+        memcpy(error_message + sizeof(error_message) - sizeof(truncation_marker), truncation_marker, sizeof(truncation_marker));
+    }
+    fprintf(stderr, "%s", error_message);
+    zelda64::show_error_message_box("Fatal Error", error_message);
     assert(false);
-        
+
     ultramodern::error_handling::quick_exit(__FILE__, __LINE__, __FUNCTION__);
 }
 
@@ -73,55 +79,6 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
     return {};
 }
 
-#if defined(__gnu_linux__)
-#include "icon_bytes.h"
-
-bool SetImageAsIcon(const char* filename, SDL_Window* window)
-{
-    // Read data
-    int width, height, bytesPerPixel;
-    void* data = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(icon_bytes), sizeof(icon_bytes), &width, &height, &bytesPerPixel, 4);
-
-    // Calculate pitch
-    int pitch;
-    pitch = width * 4;
-    pitch = (pitch + 3) & ~3;
-
-    // Setup relevance bitmask
-    int Rmask, Gmask, Bmask, Amask;
-
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-    Rmask = 0x000000FF;
-    Gmask = 0x0000FF00;
-    Bmask = 0x00FF0000;
-    Amask = 0xFF000000;
-#else
-    Rmask = 0xFF000000;
-    Gmask = 0x00FF0000;
-    Bmask = 0x0000FF00;
-    Amask = 0x000000FF;
-#endif
-
-    SDL_Surface* surface = nullptr;
-    if (data != nullptr) {
-        surface = SDL_CreateRGBSurfaceFrom(data, width, height, 32, pitch, Rmask, Gmask,
-                            Bmask, Amask);
-    }
-
-    if (surface == nullptr) {   
-        if (data != nullptr) {
-            stbi_image_free(data);
-        }
-        return false;
-	} else {
-        SDL_SetWindowIcon(window,surface);
-        SDL_FreeSurface(surface);
-        stbi_image_free(data);
-        return true;
-    }
-}
-#endif
-
 SDL_Window* window;
 
 ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::gfx_data_t) {
@@ -135,7 +92,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
 
     window = SDL_CreateWindow("Mega Man 64: Recompiled", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 960,  flags);
 #if defined(__linux__)
-    SetImageAsIcon("icons/512.png",window);
+    zelda64::set_window_icon(window);
     if (ultramodern::renderer::get_graphics_config().wm_option == ultramodern::renderer::WindowMode::Fullscreen) { // TODO: Remove once RT64 gets native fullscreen support on Linux
         SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN_DESKTOP);
     } else {
@@ -192,6 +149,14 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
     static std::vector<float> swap_buffer;
     static std::array<float, duplicated_input_frames * input_channels> duplicated_sample_buffer;
 
+    // Skip chunks that are too small to process with the duplication scheme.
+    constexpr size_t min_sample_count = duplicated_input_frames * input_channels;
+    if (sample_count <= min_sample_count) {
+        fprintf(stderr, "Warning: audio chunk too small (%zu samples, need > %zu), skipping\n",
+                sample_count, min_sample_count);
+        return;
+    }
+
     // Make sure the swap buffer is large enough to hold the audio data, including any extra space needed for resampling.
     size_t resampled_sample_count = sample_count + duplicated_input_frames * input_channels;
     size_t max_sample_count = std::max(resampled_sample_count, resampled_sample_count * audio_convert.len_mult);
@@ -211,9 +176,6 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
         swap_buffer[i + 0 + duplicated_input_frames * input_channels] = audio_data[i + 1] * (0.5f / 32768.0f) * cur_main_volume;
         swap_buffer[i + 1 + duplicated_input_frames * input_channels] = audio_data[i + 0] * (0.5f / 32768.0f) * cur_main_volume;
     }
-    
-    // TODO handle cases where a chunk is smaller than the duplicated frame count.
-    assert(sample_count > duplicated_input_frames * input_channels);
 
     // Copy the last converted samples into the duplicated sample buffer to reuse in resampling the next queued chunk.
     for (size_t i = 0; i < duplicated_input_frames * input_channels; i++) {
@@ -348,89 +310,6 @@ std::vector<recomp::GameEntry> supported_games = {
     },
 };
 
-// TODO: move somewhere else
-namespace zelda64 {
-    std::string get_game_thread_name(const OSThread* t) {
-        std::string name = "[Game] ";
-
-        switch (t->id) {
-            case 0:
-                switch (t->priority) {
-                    case 150:
-                        name += "PIMGR";
-                        break;
-
-                    case 254:
-                        name += "VIMGR";
-                        break;
-
-                    default:
-                        name += std::to_string(t->id);
-                        break;
-                }
-                break;
-
-            case 1:
-                name += "IDLE";
-                break;
-
-            case 2:
-                switch (t->priority) {
-                    case 5:
-                        name += "SLOWLY";
-                        break;
-
-                    case 127:
-                        name += "FAULT";
-                        break;
-
-                    default:
-                        name += std::to_string(t->id);
-                        break;
-                }
-                break;
-
-            case 3:
-                name += "MAIN";
-                break;
-
-            case 4:
-                name += "GRAPH";
-                break;
-
-            case 5:
-                name += "SCHED";
-                break;
-
-            case 7:
-                name += "PADMGR";
-                break;
-
-            case 10:
-                name += "AUDIOMGR";
-                break;
-
-            case 13:
-                name += "FLASHROM";
-                break;
-
-            case 18:
-                name += "DMAMGR";
-                break;
-
-            case 19:
-                name += "IRQMGR";
-                break;
-
-            default:
-                name += std::to_string(t->id);
-                break;
-        }
-
-        return name;
-    }
-}
-
 #ifdef _WIN32
 
 struct PreloadContext {
@@ -549,8 +428,6 @@ void disable_texture_pack(recomp::mods::ModContext& context, const recomp::mods:
     zelda64::renderer::disable_texture_pack(mod);
 }
 
-#define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
-
 int main(int argc, char** argv) {
     (void)argc;
     (void)argv;
@@ -609,20 +486,6 @@ int main(int argc, char** argv) {
     for (const auto& game : supported_games) {
         recomp::register_game(game);
     }
-
-    //REGISTER_FUNC(recomp_get_window_resolution);
-    //REGISTER_FUNC(recomp_get_target_aspect_ratio);
-    //REGISTER_FUNC(recomp_get_target_framerate);
-    //REGISTER_FUNC(recomp_get_autosave_enabled);
-    //REGISTER_FUNC(recomp_get_analog_cam_enabled);
-    //REGISTER_FUNC(recomp_get_camera_inputs);
-    //REGISTER_FUNC(recomp_get_targeting_mode);
-    //REGISTER_FUNC(recomp_get_bgm_volume);
-    //REGISTER_FUNC(recomp_get_low_health_beeps_enabled);
-    //REGISTER_FUNC(recomp_get_gyro_deltas);
-    //REGISTER_FUNC(recomp_get_mouse_deltas);
-    //REGISTER_FUNC(recomp_get_inverted_axes);
-    //REGISTER_FUNC(recomp_get_analog_inverted_axes);
 
     zelda64::register_overlays();
  //   zelda64::register_patches();

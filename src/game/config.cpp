@@ -133,59 +133,72 @@ namespace recomp {
 }
 
 std::filesystem::path zelda64::get_app_folder_path() {
-   // directly check for portable.txt (windows and native linux binary)
-   if (std::filesystem::exists("portable.txt")) {
-       return std::filesystem::current_path();
+   static std::filesystem::path cached_path;
+   static bool cached = false;
+
+   if (cached) {
+       return cached_path;
    }
+
+   auto compute_path = []() -> std::filesystem::path {
+       // directly check for portable.txt (windows and native linux binary)
+       if (std::filesystem::exists("portable.txt")) {
+           return std::filesystem::current_path();
+       }
 
 #if defined(__APPLE__)
-   // Check for portable file in the directory containing the app bundle.
-   const auto app_bundle_path = zelda64::get_bundle_directory().parent_path();
-   if (std::filesystem::exists(app_bundle_path / "portable.txt")) {
-       return app_bundle_path;
-   }
+       // Check for portable file in the directory containing the app bundle.
+       const auto app_bundle_path = zelda64::get_bundle_directory().parent_path();
+       if (std::filesystem::exists(app_bundle_path / "portable.txt")) {
+           return app_bundle_path;
+       }
 #endif
 
-   std::filesystem::path recomp_dir{};
+       std::filesystem::path recomp_dir{};
 
 #if defined(_WIN32)
-   // Deduce local app data path.
-   PWSTR known_path = NULL;
-   HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &known_path);
-   if (result == S_OK) {
-       recomp_dir = std::filesystem::path{known_path} / zelda64::program_id;
-   }
+       // Deduce local app data path.
+       PWSTR known_path = NULL;
+       HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &known_path);
+       if (result == S_OK) {
+           recomp_dir = std::filesystem::path{known_path} / zelda64::program_id;
+       }
 
-   CoTaskMemFree(known_path);
+       CoTaskMemFree(known_path);
 #elif defined(__linux__) || defined(__APPLE__)
-   // check for APP_FOLDER_PATH env var
-   if (getenv("APP_FOLDER_PATH") != nullptr) {
-       return std::filesystem::path{getenv("APP_FOLDER_PATH")};
-   }
+       // check for APP_FOLDER_PATH env var
+       if (getenv("APP_FOLDER_PATH") != nullptr) {
+           return std::filesystem::path{getenv("APP_FOLDER_PATH")};
+       }
 
 #if defined(__APPLE__)
-   const auto supportdir = zelda64::get_application_support_directory();
-   if (supportdir) {
-       return *supportdir / zelda64::program_id;
-   }
+       const auto supportdir = zelda64::get_application_support_directory();
+       if (supportdir) {
+           return *supportdir / zelda64::program_id;
+       }
 #endif
 
-   const char *homedir;
+       const char *homedir;
 
-   if ((homedir = getenv("HOME")) == nullptr) {
-    #if defined(__linux__)
-       homedir = getpwuid(getuid())->pw_dir;
-    #elif defined(__APPLE__)
-        homedir = GetHomeDirectory();
-    #endif
-   }
+       if ((homedir = getenv("HOME")) == nullptr) {
+        #if defined(__linux__)
+           homedir = getpwuid(getuid())->pw_dir;
+        #elif defined(__APPLE__)
+            homedir = GetHomeDirectory();
+        #endif
+       }
 
-   if (homedir != nullptr) {
-       recomp_dir = std::filesystem::path{homedir} / (std::u8string{u8".config/"} + std::u8string{zelda64::program_id});
-   }
+       if (homedir != nullptr) {
+           recomp_dir = std::filesystem::path{homedir} / (std::u8string{u8".config/"} + std::u8string{zelda64::program_id});
+       }
 #endif
 
-    return recomp_dir;
+       return recomp_dir;
+   };
+
+   cached_path = compute_path();
+   cached = true;
+   return cached_path;
 }
 
 bool read_json(std::ifstream input_file, nlohmann::json& json_out) {
