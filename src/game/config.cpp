@@ -5,6 +5,7 @@
 #include "zelda_support.h"
 #include "ultramodern/config.hpp"
 #include "librecomp/files.hpp"
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -490,27 +491,37 @@ void zelda64::load_config() {
         std::filesystem::create_directories(recomp_dir);
     }
 
-    // TODO error handling for failing to save config files after resetting them.
-
     if (!load_general_config(general_path)) {
         // Set the general settings from an empty json to use defaults.
         set_general_settings_from_json({});
-        save_general_config(general_path);
+        if (!save_general_config(general_path)) {
+            fprintf(stderr, "Warning: failed to save default general config to %s\n",
+                    general_path.string().c_str());
+        }
     }
 
     if (!load_graphics_config(graphics_path)) {
         reset_graphics_options();
-        save_graphics_config(graphics_path);
+        if (!save_graphics_config(graphics_path)) {
+            fprintf(stderr, "Warning: failed to save default graphics config to %s\n",
+                    graphics_path.string().c_str());
+        }
     }
 
     if (!load_controls_config(controls_path)) {
         zelda64::reset_input_bindings();
-        save_controls_config(controls_path);
+        if (!save_controls_config(controls_path)) {
+            fprintf(stderr, "Warning: failed to save default controls config to %s\n",
+                    controls_path.string().c_str());
+        }
     }
 
     if (!load_sound_config(sound_path)) {
         zelda64::reset_sound_settings();
-        save_sound_config(sound_path);
+        if (!save_sound_config(sound_path)) {
+            fprintf(stderr, "Warning: failed to save default sound config to %s\n",
+                    sound_path.string().c_str());
+        }
     }
 }
 
@@ -523,10 +534,16 @@ void zelda64::save_config() {
 
     std::filesystem::create_directories(recomp_dir);
 
-    // TODO error handling for failing to save config files.
-
-    save_general_config(recomp_dir / general_filename);
-    save_graphics_config(recomp_dir / graphics_filename);
-    save_controls_config(recomp_dir / controls_filename);
-    save_sound_config(recomp_dir / sound_filename);
+    if (!save_general_config(recomp_dir / general_filename)) {
+        fprintf(stderr, "Warning: failed to save general config\n");
+    }
+    if (!save_graphics_config(recomp_dir / graphics_filename)) {
+        fprintf(stderr, "Warning: failed to save graphics config\n");
+    }
+    if (!save_controls_config(recomp_dir / controls_filename)) {
+        fprintf(stderr, "Warning: failed to save controls config\n");
+    }
+    if (!save_sound_config(recomp_dir / sound_filename)) {
+        fprintf(stderr, "Warning: failed to save sound config\n");
+    }
 }

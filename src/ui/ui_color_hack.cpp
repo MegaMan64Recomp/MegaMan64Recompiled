@@ -162,10 +162,10 @@ namespace recompui {
 	// This overwrites the object's vtable, allowing us to override color parsing behavior to use 0-1 alpha instead of 0-255.
 	// Ideally we'd just replace the pointer itself, but RmlUi doesn't provide a way to do that currently.
 	void apply_color_hack() {
-		// Allocate and leak a parser to act as a vtable source.
-		PropertyParserColorHack* new_parser = new PropertyParserColorHack();
-		// Copy the allocated object into the color parser pointer to overwrite its vtable.
-		memcpy((void*)Rml::StyleSheetSpecification::GetParser("color"), (void*)new_parser, sizeof(*new_parser));
+		// Use a function-local static to avoid a heap allocation; the object just serves as a vtable source.
+		static PropertyParserColorHack local_parser;
+		// Copy the local object into the color parser pointer to overwrite its vtable.
+		memcpy((void*)Rml::StyleSheetSpecification::GetParser("color"), (void*)&local_parser, sizeof(local_parser));
 	}
 
 	ColourMap PropertyParserColorHack::html_colours{};

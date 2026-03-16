@@ -1,4 +1,4 @@
-#include <cassert>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 
@@ -11,9 +11,6 @@ void naive_copy(std::span<uint8_t> dst, std::span<const uint8_t> src) {
 }
 
 void yaz0_decompress(std::span<const uint8_t> input, std::span<uint8_t> output) {
-    int32_t layoutBitIndex;
-    uint8_t layoutBits;
-
     size_t input_pos = 0;
     size_t output_pos = 0;
 
@@ -44,6 +41,13 @@ void yaz0_decompress(std::span<const uint8_t> input, std::span<uint8_t> output) 
                     length = ((bytes & 0xF000) >> 12) + 2;
                 }
 
+                // Validate back-reference bounds before copying.
+                if (offset > output_pos || output_pos + length > output_size) {
+                    fprintf(stderr, "yaz0_decompress: invalid back-reference (output_pos=%zu, offset=%u, length=%u, output_size=%zu)\n",
+                            output_pos, offset, length, output_size);
+                    return;
+                }
+
                 naive_copy(output.subspan(output_pos, length), output.subspan(output_pos - offset, length));
                 output_pos += length;
             }
@@ -72,12 +76,13 @@ std::vector<uint8_t> zelda64::decompress_mm(std::span<const uint8_t> compressed_
     // Sanity check the rom size and header. These should already be correct from the runtime's check,
     // but it should prevent this file from accidentally being copied to another recomp.
     if (compressed_rom.size() != 0x2000000) {
-        assert(false);
+        fprintf(stderr, "decompress_mm: unexpected ROM size %zu (expected 0x2000000)\n", compressed_rom.size());
         return {};
     }
 
     if (compressed_rom[0x3B] != 'N' || compressed_rom[0x3C] != 'Z' || compressed_rom[0x3D] != 'S' || compressed_rom[0x3E] != 'E') {
-        assert(false);
+        fprintf(stderr, "decompress_mm: ROM header game ID mismatch (got '%.4s', expected 'NZSE')\n",
+                reinterpret_cast<const char*>(&compressed_rom[0x3B]));
         return {};
     }
 
@@ -129,7 +134,8 @@ std::vector<uint8_t> zelda64::decompress_mm(std::span<const uint8_t> compressed_
                     compressed_rom[cur_entry.rom_start + 2] != 'z' ||
                     compressed_rom[cur_entry.rom_start + 3] != '0')
                 {
-                    assert(false);
+                    fprintf(stderr, "decompress_mm: entry %zu missing Yaz0 magic at ROM offset 0x%08X\n",
+                            cur_entry_index - 1, cur_entry.rom_start);
                     return {};
                 }
                 // Skip the yaz0 header.
