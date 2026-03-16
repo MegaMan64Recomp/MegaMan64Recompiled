@@ -140,6 +140,8 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
                     SDL_GameControllerSetSensorEnabled(controller, SDL_SensorType::SDL_SENSOR_GYRO, SDL_TRUE);
                     SDL_GameControllerSetSensorEnabled(controller, SDL_SensorType::SDL_SENSOR_ACCEL, SDL_TRUE);
                 }
+            } else {
+                fprintf(stderr, "Failed to open controller %d: %s\n", controller_event->which, SDL_GetError());
             }
         }
         break;
