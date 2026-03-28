@@ -6,6 +6,7 @@
 #include "RmlUi/Core.h"
 #include "nfd.h"
 #include <filesystem>
+#include <array>
 
 static std::string version_string;
 
@@ -14,8 +15,63 @@ bool mm_rom_valid = false;
 
 extern std::vector<recomp::GameEntry> supported_games;
 
+static bool try_cache_local_rom() {
+	const std::array<std::filesystem::path, 4> candidate_paths = {
+		std::filesystem::path{"megaman64.us.z64"},
+		std::filesystem::path{"Mega Man 64 (USA).z64"},
+		std::filesystem::path{"megaman.n64.us.1.0.z64"},
+		std::filesystem::path{"Mega Man 64.z64"},
+	};
+
+	for (const auto& candidate : candidate_paths) {
+		if (!std::filesystem::exists(candidate)) {
+			continue;
+		}
+
+		if (recomp::select_rom(candidate, supported_games[0].game_id) == recomp::RomValidationError::Good) {
+			return true;
+		}
+	}
+
+	for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::current_path())) {
+		if (!entry.is_regular_file()) {
+			continue;
+		}
+
+		const std::filesystem::path extension = entry.path().extension();
+		if (extension != ".z64" && extension != ".n64" && extension != ".v64") {
+			continue;
+		}
+
+		if (recomp::select_rom(entry.path(), supported_games[0].game_id) == recomp::RomValidationError::Good) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static void queue_autostart_game() {
+	if (!mm_rom_valid || ultramodern::is_game_started()) {
+		return;
+	}
+
+	SDL_Event event{};
+	event.type = SDL_USEREVENT;
+	event.user.code = recompui::launcher_autostart_event_code;
+	recompui::queue_event(event);
+}
+
+void recompui::autostart_launcher_game() {
+	if (!mm_rom_valid || ultramodern::is_game_started()) {
+		return;
+	}
+
+	recomp::start_game(supported_games[0].game_id);
+	recompui::set_current_menu(recompui::Menu::None);
+}
+
 void select_rom() {
-	nfdnchar_t* native_path = nullptr;
 	zelda64::open_file_dialog([](bool success, const std::filesystem::path& path) {
 		if (success) {
 			recomp::RomValidationError rom_error = recomp::select_rom(path, supported_games[0].game_id);
@@ -23,6 +79,7 @@ void select_rom() {
 				case recomp::RomValidationError::Good:
 					mm_rom_valid = true;
 					model_handle.DirtyVariable("mm_rom_valid");
+					queue_autostart_game();
 					break;
 				case recomp::RomValidationError::FailedToOpen:
 					recompui::message_box("Failed to open ROM file.");
@@ -52,6 +109,10 @@ class LauncherMenu : public recompui::MenuController {
 public:
     LauncherMenu() {
 		mm_rom_valid = recomp::is_rom_valid(supported_games[0].game_id);
+		if (!mm_rom_valid) {
+			mm_rom_valid = try_cache_local_rom();
+		}
+		queue_autostart_game();
     }
 	~LauncherMenu() override {
 

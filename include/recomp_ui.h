@@ -15,6 +15,8 @@ namespace Rml {
 }
 
 namespace recompui {
+	constexpr Sint32 launcher_autostart_event_code = 0x4D4D3634;
+
 	class UiEventListenerInstancer;
 
 	class MenuController {
@@ -32,6 +34,7 @@ namespace recompui {
 
 	void queue_event(const SDL_Event& event);
 	bool try_deque_event(SDL_Event& out);
+	void autostart_launcher_game();
 
 	std::unique_ptr<UiEventListenerInstancer> make_event_listener_instancer();
 	void register_event(UiEventListenerInstancer& listener, const std::string& name, event_handler_t* handler);

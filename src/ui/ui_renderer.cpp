@@ -1380,7 +1380,9 @@ void draw_hook(RT64::RenderCommandList* command_list, RT64::RenderFramebuffer* s
                 kb_interacted = true;
                 break;
             case SDL_EventType::SDL_USEREVENT:
-                if (cur_event.user.code == SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTY) {
+                if (cur_event.user.code == recompui::launcher_autostart_event_code) {
+                    recompui::autostart_launcher_game();
+                } else if (cur_event.user.code == SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTY) {
                     ui_context->rml.await_stick_return_y = true;
                 } else if (cur_event.user.code == SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTX) {
                     ui_context->rml.await_stick_return_x = true;
