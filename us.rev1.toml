@@ -4,7 +4,7 @@
 entrypoint = 0x80025C00
 output_func_path = "RecompiledFuncs"
 symbols_file_path = "MegaMan64RecompSyms/megaman64.us.rev1.syms.toml"
-rom_file_path = "megaman64.us.z64"
+rom_file_path = "MegaMan64.us.rev1.z64"
 
 manual_funcs = [
 ]
