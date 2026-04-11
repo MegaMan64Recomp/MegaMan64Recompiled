@@ -10,7 +10,9 @@ _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
 __attribute__((noinline, weak, used, section(".recomp_event"))) void func {} \
 _Pragma("GCC diagnostic pop")
 
-// TODO fix renaming symbols in patch recompilation
+#define SCREEN_HEIGHT 240
+#define SCREEN_WIDTH 320
+
 #define osCreateMesgQueue osCreateMesgQueue_recomp
 #define osRecvMesg osRecvMesg_recomp
 #define osSendMesg osSendMesg_recomp
@@ -26,27 +28,18 @@ _Pragma("GCC diagnostic pop")
 #define osContStartQuery osContStartQuery_recomp
 #define osContGetQuery osContGetQuery_recomp
 
+#define memcpy memcpy_recomp
+#define osVirtualToPhysical osVirtualToPhysical_recomp
 #define sinf __sinf_recomp
 #define cosf __cosf_recomp
 #define bzero bzero_recomp
 #define gRandFloat sRandFloat
-#include "sys.h"
-#include "global.h"
 #include "PR/ultratypes.h"
 #include "rt64_extended_gbi.h"
-#include "functions.h"
 #include "patch_helpers.h"
 
-#ifndef gEXFillRectangle
-#define gEXFillRectangle(cmd, lorigin, rorigin, ulx, uly, lrx, lry) \
-    G_EX_COMMAND2(cmd, \
-        PARAM(RT64_EXTENDED_OPCODE, 8, 24) | PARAM(G_EX_FILLRECT_V1, 24, 0), \
-        PARAM(lorigin, 12, 0) | PARAM(rorigin, 12, 12), \
-        \
-        PARAM((ulx) * 4, 16, 16) | PARAM((uly) * 4, 16, 0), \
-        PARAM((lrx) * 4, 16, 16) | PARAM((lry) * 4, 16, 0) \
-    )
-#endif
+#define gEXMatrixGroupSkipAll(cmd, id, push, proj, edit) \
+    gEXMatrixGroup(cmd, id, G_EX_INTERPOLATE_SIMPLE, push, proj, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_ORDER_LINEAR, edit, G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP)
 
 #define gEXMatrixGroupNoInterpolation(cmd, push, proj, edit) \
     gEXMatrixGroup(cmd, G_EX_ID_IGNORE, G_EX_INTERPOLATE_SIMPLE, push, proj, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_ORDER_LINEAR, edit)
@@ -72,33 +65,36 @@ _Pragma("GCC diagnostic pop")
 #define gEXMatrixGroupDecomposedVertsOrderAuto(cmd, id, push, proj, edit) \
     gEXMatrixGroupDecomposed(cmd, id, push, proj, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_AUTO, edit)
 
-
+void memcpy(void * dst, void *src, int size);
 int recomp_printf(const char* fmt, ...);
 void Update_UI_Alignments();
 
-#define INCBIN(identifier, filename)          \
-    asm(".pushsection .rodata\n"              \
-        "\t.local " #identifier "\n"          \
-        "\t.type " #identifier ", @object\n"  \
-        "\t.balign 8\n"                       \
-        #identifier ":\n"                     \
-        "\t.incbin \"" filename "\"\n\n"      \
-                                              \
-        "\t.balign 8\n"                       \
-        "\t.popsection\n");                   \
-    extern u8 identifier[]
+// #define INCBIN(identifier, filename)          \
+//     asm(".pushsection .rodata\n"              \
+//         "\t.local " #identifier "\n"          \
+//         "\t.type " #identifier ", @object\n"  \
+//         "\t.balign 8\n"                       \
+//         #identifier ":\n"                     \
+//         "\t.incbin \"" filename "\"\n\n"      \
+//                                               \
+//         "\t.balign 8\n"                       \
+//         "\t.popsection\n");                   \
+//     extern u8 identifier[]
 
+typedef int bool;
 void recomp_crash(const char* err);
+void set_all_interpolation_skipped(bool skipped);
+bool all_interpolation_skipped();
+void recomp_interp(u32 id);
+void recomp_push_viewport();
+void recomp_pop_viewport();
 
 typedef unsigned long collection_key_t;
-
 typedef unsigned long U32ValueHashmapHandle;
-
 U32ValueHashmapHandle recomputil_create_u32_value_hashmap();
 int recomputil_u32_value_hashmap_insert(U32ValueHashmapHandle, collection_key_t, unsigned long);
 int recomputil_u32_value_hashmap_get(U32ValueHashmapHandle, collection_key_t, unsigned long*);
 int recomputil_u32_value_hashmap_erase(U32ValueHashmapHandle, collection_key_t);
-
 
 DECLARE_FUNC(U32ValueHashmapHandle, recomputil_create_u32_value_hashmap, void);
 DECLARE_FUNC(void, recomputil_destroy_u32_value_hashmap, U32ValueHashmapHandle handle);
