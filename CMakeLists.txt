@@ -143,7 +143,7 @@ add_custom_command(OUTPUT
                        ${CMAKE_SOURCE_DIR}/RecompiledPatches/recomp_overlays.inl
                        ${CMAKE_SOURCE_DIR}/RecompiledPatches/funcs.h
                    # TODO: Look into why modifying patches requires two builds to take
-                   COMMAND wsl ./N64Recomp patches.toml
+                   COMMAND ./N64Recomp patches.toml
                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                    DEPENDS ${CMAKE_SOURCE_DIR}/patches/patches.elf
 )
