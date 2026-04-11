@@ -1,0 +1,11 @@
+text_offset = 0x7EF10
+text_size = 0x0C60
+text_address = 0x04001080
+rom_file_path = "MegaMan64.us.rev1.z64"
+output_file_path = "rsp/aspMain.cpp"
+output_function_name = "aspMain"
+extra_indirect_branch_targets = [
+0x119C, 0x1C84, 0x1208, 0x11C8, 0x1248, 0x12B0,
+0x1348, 0x12D4,  0x1C84, 0x139C, 0x17EC, 0x127C,
+0x1A64, 0x1384
+]
