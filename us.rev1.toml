@@ -4,7 +4,7 @@
 entrypoint = 0x80025C00
 output_func_path = "RecompiledFuncs"
 symbols_file_path = "MegaMan64RecompSyms/megaman64.us.rev1.syms.toml"
-rom_file_path = "megaman64.us.z64"
+rom_file_path = "MegaMan64.us.rev1.z64"
 
 manual_funcs = [
 ]
@@ -37,11 +37,13 @@ text = "yield_self(rdram);"
 func = "func_8003912C_1452C"
 before_vram = 0x80039DE0
 text= """
+	{
 		recomp_context savedContext1 = *ctx;
 		ctx->r4=ctx->r22; //Tile X
 		ctx->r5=ctx->r30; //Tile Y
 		recomp_tag_terrain(rdram, ctx);
 		*ctx = savedContext1;
+	}
 	"""
 
 #Tagging - Terrain
@@ -49,11 +51,13 @@ text= """
 func = "func_8003912C_1452C"
 before_vram = 0x80039E54
 text= """
+	{
 		recomp_context savedContext2 = *ctx;
 		ctx->r4=ctx->r22; //Tile X
 		ctx->r5=ctx->r30; //Tile Y
 		recomp_tag_terrain(rdram, ctx);
 		*ctx = savedContext2;
+	}
 	"""
 
 #Tagging - Terrain
@@ -61,11 +65,13 @@ text= """
 func = "func_8003912C_1452C"
 before_vram = 0x80039EB0
 text= """
+	{
 		recomp_context savedContext3 = *ctx;
 		ctx->r4=ctx->r22; //Tile X
 		ctx->r5=ctx->r30; //Tile Y
 		recomp_tag_terrain(rdram, ctx);
 		*ctx = savedContext3;
+	}
 	"""
 
 #Tagging - Terrain Transparent
@@ -73,10 +79,12 @@ text= """
 func = "func_8007E8D4_59CD4"
 before_vram = 0x8007F0A8
 text= """
+	{
 		recomp_context savedContext1 = *ctx;
 		ctx->r4=ctx->r16;
 		recomp_tag_terrain_transparent(rdram, ctx);
 		*ctx = savedContext1;
+	}
 	"""
 
 #Tagging - Terrain Transparent
@@ -84,10 +92,12 @@ text= """
 func = "func_8007E8D4_59CD4"
 before_vram = 0x8007F17C
 text= """
+	{
 		recomp_context savedContext2 = *ctx;
 		ctx->r4=ctx->r16;
 		recomp_tag_terrain_transparent(rdram, ctx);
 		*ctx = savedContext2;
+	}
 	"""
 
 #Tagging - MegaMan Body
