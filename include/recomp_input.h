@@ -20,8 +20,8 @@ namespace recomp {
     #define DEFINE_N64_BUTTON_INPUTS() \
         DEFINE_INPUT(A, 0x8000, "Jump") \
         DEFINE_INPUT(B, 0x4000, "Buster") \
-        DEFINE_INPUT(Z, 0x2000, "Strafe/Rotate Left") \
-        DEFINE_INPUT(R, 0x0010, "Strafe/Rotate Right") \
+        DEFINE_INPUT(Z, 0x2000, "Strafe/Rotate L") \
+        DEFINE_INPUT(R, 0x0010, "Strafe/Rotate R") \
         DEFINE_INPUT(START, 0x1000, "Pause") \
         DEFINE_INPUT(C_UP, 0x0008, "Map") \
         DEFINE_INPUT(C_LEFT, 0x0002, "Special Weapon") \
@@ -31,7 +31,7 @@ namespace recomp {
         DEFINE_INPUT(DPAD_RIGHT, 0x0100, "Move Right") \
         DEFINE_INPUT(DPAD_DOWN, 0x0400, "Move Down") \
         DEFINE_INPUT(DPAD_LEFT, 0x0200, "Move Left") \
-        DEFINE_INPUT(L, 0x0020, "Strafe/Rotate Left")
+        DEFINE_INPUT(L, 0x0020, "Strafe/Rotate L")
 
     #define DEFINE_N64_AXIS_INPUTS() \
         DEFINE_INPUT(Y_AXIS_POS, 0, "Up") \
