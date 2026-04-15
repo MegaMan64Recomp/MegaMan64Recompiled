@@ -299,7 +299,7 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
 
                     poolNum = 0;
                     var_a3 = 4;
-                    var_a2_2 = 0x1D800;
+                    var_a2_2 = 0x1D800 * 16; //@recomp check using increased DL size
                     do {
                         gfxTaskNode = gfxContext->taskPoolStart[poolNum];
                         unkMtx = *(s32 *) ((u8 *) &gfxContext->taskPoolStart[poolNum] + 0x144);
