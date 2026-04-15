@@ -24,7 +24,7 @@ namespace recomp {
         DEFINE_INPUT(R, 0x0010, "Strafe/Rotate Right") \
         DEFINE_INPUT(START, 0x1000, "Pause") \
         DEFINE_INPUT(C_UP, 0x0008, "Map") \
-        DEFINE_INPUT(C_LEFT, 0x0002, "Energy Weapon") \
+        DEFINE_INPUT(C_LEFT, 0x0002, "Special Weapon") \
         DEFINE_INPUT(C_DOWN, 0x0004, "Interact") \
         DEFINE_INPUT(C_RIGHT, 0x0001, "Look") \
         DEFINE_INPUT(DPAD_UP, 0x0800, "Move Up") \
