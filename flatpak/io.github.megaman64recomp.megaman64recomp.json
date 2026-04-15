@@ -1,0 +1,63 @@
+{
+  "id": "io.github.megaman64recomp.megaman64recomp",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "25.08",
+  "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions" : [ "org.freedesktop.Sdk.Extension.llvm20" ],
+  "finish-args": [
+    "--share=network",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--socket=pulseaudio",
+    "--device=all",
+    "--filesystem=host",
+    "--filesystem=/media",
+    "--filesystem=/run/media",
+    "--filesystem=/mnt",
+    "--filesystem=xdg-run/gamescope-0:ro"
+  ],
+  "modules": [
+    {
+      "name": "MegaMan64Recompiled",
+      "buildsystem": "simple",
+      "build-commands": [
+        "cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S lib/N64Recomp -B lib/N64Recomp/cmake-build",
+        "cmake --build lib/N64Recomp/cmake-build --config Release --target N64Recomp --parallel",
+        "cmake --build lib/N64Recomp/cmake-build --config Release --target RSPRecomp --parallel",
+        "cp lib/N64Recomp/cmake-build/N64Recomp N64Recomp",
+        "cp lib/N64Recomp/cmake-build/RSPRecomp RSPRecomp",
+        "./N64Recomp us.rev1.toml",
+        "./RSPRecomp aspMain.us.rev1.toml",
+        "cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_MAKE_PROGRAM=ninja -DPATCHES_C_COMPILER=clang -DPATCHES_LD=ld.lld -DRECOMP_FLATPAK=ON -G Ninja -S . -B cmake-build",
+        "cmake --build cmake-build --config Release --target MegaMan64Recompiled --parallel",
+        "rm -rf assets/scss",
+        "mkdir -p /app/bin",
+        "cp cmake-build/MegaMan64Recompiled /app/bin/MegaMan64Recompiled",
+        "cp recompcontrollerdb.txt /app/bin/recompcontrollerdb.txt",
+        "cp -R assets /app/bin/assets",
+        "install -Dm644 icons/512.png /app/share/icons/hicolor/512x512/apps/${FLATPAK_ID}.png",
+        "install -Dm644 flatpak/io.github.megaman64recomp.megaman64recomp.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml",
+        "install -Dm644 flatpak/io.github.megaman64recomp.megaman64recomp.desktop /app/share/applications/${FLATPAK_ID}.desktop"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/N64Recomp/N64Recomp.git",
+          "commit": "98bf104b1b5ed83126af8bcab0cc964782617dbf",
+          "dest": "lib/N64Recomp"
+        },
+        {
+          "type": "dir",
+          "path": "../"
+        }
+      ],
+      "build-options": {
+        "append-path": "/usr/lib/sdk/llvm20/bin",
+        "prepend-ld-library-path": "/usr/lib/sdk/llvm20/lib",
+        "build-args": [
+          "--share=network"
+        ]
+      }
+    }
+  ]
+}

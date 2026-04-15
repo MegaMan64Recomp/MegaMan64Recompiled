@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 # set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-everything /W4")
@@ -22,6 +23,10 @@ endif()
 
 if (APPLE)
     enable_language(OBJC OBJCXX)
+endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    option(RECOMP_FLATPAK "Configure the build for Flatpak compatibility." OFF)
 endif()
 
 # Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
@@ -38,6 +43,12 @@ endif()
 
 set(RT64_STATIC TRUE)
 set(RT64_SDL_WINDOW_VULKAN TRUE)
+add_compile_definitions(HLSL_CPU)
+
+if (RECOMP_FLATPAK)
+    add_compile_definitions(RECOMP_FLATPAK)
+endif()
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/rt64 ${CMAKE_BINARY_DIR}/rt64)
 
 # set(BUILD_SHARED_LIBS_SAVED "${BUILD_SHARED_LIBS}")
@@ -45,9 +56,10 @@ set(BUILD_SHARED_LIBS OFF)
 SET(LUNASVG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/lunasvg)
 # set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_SAVED}")
-SET(ENABLE_SVG_PLUGIN ON CACHE BOOL "" FORCE)
+SET(RMLUI_SVG_PLUGIN ON CACHE BOOL "" FORCE)
 SET(RMLUI_TESTS_ENABLED OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/RmlUi)
+target_compile_definitions(rmlui_core PRIVATE LUNASVG_BUILD_STATIC)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime)
 
@@ -108,9 +120,9 @@ if(NOT DEFINED PATCHES_LD)
     set(PATCHES_LD ld.lld)
 endif()
 
-if(NOT DEFINED PATCHES_OBJCOPY)
-    set(PATCHES_OBJCOPY llvm-objcopy)
-endif()
+#if(NOT DEFINED PATCHES_OBJCOPY)
+#    set(PATCHES_OBJCOPY llvm-objcopy)
+#endif()
 
 add_custom_target(PatchesBin
     COMMAND ${CMAKE_COMMAND} -E env CC=${PATCHES_C_COMPILER} LD=${PATCHES_LD} make
@@ -131,7 +143,7 @@ add_custom_command(OUTPUT
                        ${CMAKE_SOURCE_DIR}/RecompiledPatches/recomp_overlays.inl
                        ${CMAKE_SOURCE_DIR}/RecompiledPatches/funcs.h
                    # TODO: Look into why modifying patches requires two builds to take
-                   #COMMAND ./N64Recomp patches.toml
+                   COMMAND ./N64Recomp patches.toml
                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                    DEPENDS ${CMAKE_SOURCE_DIR}/patches/patches.elf
 )
@@ -152,30 +164,59 @@ add_executable(MegaMan64Recompiled)
 add_dependencies(MegaMan64Recompiled DownloadGameControllerDB)
 
 set (SOURCES
-    ${CMAKE_SOURCE_DIR}/src/main/main.cpp
-    ${CMAKE_SOURCE_DIR}/src/main/support.cpp
-    ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
-    ${CMAKE_SOURCE_DIR}/src/main/register_patches.cpp
-    ${CMAKE_SOURCE_DIR}/src/main/rt64_render_context.cpp
+        ${CMAKE_SOURCE_DIR}/src/main/main.cpp
+        ${CMAKE_SOURCE_DIR}/src/main/support.cpp
+        ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
+        ${CMAKE_SOURCE_DIR}/src/main/register_patches.cpp
+        ${CMAKE_SOURCE_DIR}/src/main/rt64_render_context.cpp
 
-    ${CMAKE_SOURCE_DIR}/src/game/input.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/controls.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/config.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/scene_table.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/debug.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/quicksaving.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/recomp_api.cpp
-    ${CMAKE_SOURCE_DIR}/src/game/rom_decompression.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/input.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/controls.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/config.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/scene_table.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/debug.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/quicksaving.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/recomp_api.cpp
+#        ${CMAKE_SOURCE_DIR}/src/game/recomp_actor_api.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/recomp_data_api.cpp
+        ${CMAKE_SOURCE_DIR}/src/game/rom_decompression.cpp
 
-    ${CMAKE_SOURCE_DIR}/src/ui/ui_renderer.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/ui_launcher.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/ui_config.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/ui_color_hack.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/ui_rml_hacks.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_renderer.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_state.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_launcher.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_config.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_prompt.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_config_sub_menu.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_color_hack.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_rml_hacks.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_elements.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_mod_details_panel.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_mod_installer.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_mod_menu.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_api.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_api_events.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_api_images.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/ui_utils.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/util/hsv.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/core/ui_context.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_button.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_clickable.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_container.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_element.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_image.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_label.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_radio.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_scroll_container.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_slider.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_span.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_style.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_text_input.cpp
+        ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_toggle.cpp
 
-    ${CMAKE_SOURCE_DIR}/rsp/aspMain.cpp
+        ${CMAKE_SOURCE_DIR}/rsp/aspMain.cpp
+        # ${CMAKE_SOURCE_DIR}/rsp/njpgdspMain.cpp
 
-    ${CMAKE_SOURCE_DIR}/lib/RmlUi/Backends/RmlUi_Platform_SDL.cpp
+        ${CMAKE_SOURCE_DIR}/lib/RmlUi/Backends/RmlUi_Platform_SDL.cpp
 )
 
 if (APPLE)
@@ -183,22 +224,23 @@ if (APPLE)
 endif()
 
 target_include_directories(MegaMan64Recompiled PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include
-    ${CMAKE_SOURCE_DIR}/lib/concurrentqueue
-    ${CMAKE_SOURCE_DIR}/lib/GamepadMotionHelpers
-    ${CMAKE_SOURCE_DIR}/lib/RmlUi/Include
-    ${CMAKE_SOURCE_DIR}/lib/RmlUi/Backends
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/hlslpp/include
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/dxc/inc
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src/rhi
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src/render
-    ${CMAKE_SOURCE_DIR}/lib/freetype-windows-binaries/include
-    ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/nativefiledialog-extended/src/include
-    ${CMAKE_BINARY_DIR}/shaders
-    ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include
+        ${CMAKE_SOURCE_DIR}/lib/concurrentqueue
+        ${CMAKE_SOURCE_DIR}/lib/GamepadMotionHelpers
+        ${CMAKE_SOURCE_DIR}/lib/RmlUi/Include
+        ${CMAKE_SOURCE_DIR}/lib/RmlUi/Backends
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/hlslpp/include
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/dxc/inc
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/rhi
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/render
+        ${CMAKE_SOURCE_DIR}/lib/freetype-windows-binaries/include
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/nativefiledialog-extended/src/include
+        ${CMAKE_SOURCE_DIR}/lib/SlotMap
+        ${CMAKE_BINARY_DIR}/shaders
+        ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
@@ -265,7 +307,7 @@ if (WIN32)
     )
 
     target_sources(MegaMan64Recompiled PRIVATE ${CMAKE_SOURCE_DIR}/icons/app.rc)
-    target_link_libraries(MegaMan64Recompiled PRIVATE SDL2)
+    target_link_libraries(MegaMan64Recompiled PRIVATE SDL2 Winmm.lib)
 endif()
 
 if (APPLE)
@@ -329,8 +371,8 @@ target_link_libraries(MegaMan64Recompiled PRIVATE
     librecomp
     ultramodern
     rt64
-    RmlCore
-    RmlDebugger
+    RmlUi::Core
+    RmlUi::Debugger
     nfd
     lunasvg
 )
@@ -369,6 +411,27 @@ endif()
 
 build_vertex_shader(MegaMan64Recompiled "shaders/InterfaceVS.hlsl" "shaders/InterfaceVS.hlsl")
 build_pixel_shader(MegaMan64Recompiled "shaders/InterfacePS.hlsl" "shaders/InterfacePS.hlsl")
+
+# Embed all .nrm files in the "mods" directory
+file(GLOB NRM_FILES "${CMAKE_SOURCE_DIR}/mods/*.nrm")
+
+set(GENERATED_NRM_SOURCES "")
+
+foreach(NRM_FILE ${NRM_FILES})
+    get_filename_component(NRM_NAME ${NRM_FILE} NAME_WE)
+    set(OUT_C "${CMAKE_CURRENT_BINARY_DIR}/mods/${NRM_NAME}.c")
+    set(OUT_H "${CMAKE_CURRENT_BINARY_DIR}/mods/${NRM_NAME}.h")
+
+    add_custom_command(
+        OUTPUT ${OUT_C} ${OUT_H}
+        COMMAND file_to_c ${NRM_FILE} ${NRM_NAME} ${OUT_C} ${OUT_H}
+        DEPENDS ${NRM_FILE}
+    )
+
+    list(APPEND GENERATED_NRM_SOURCES ${OUT_C})
+endforeach()
+
+target_sources(MegaMan64Recompiled PRIVATE ${GENERATED_NRM_SOURCES})
 
 target_sources(MegaMan64Recompiled PRIVATE ${SOURCES})
 

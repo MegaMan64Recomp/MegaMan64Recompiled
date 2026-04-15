@@ -68,7 +68,7 @@ constexpr uint32_t byteswap(uint32_t val) {
 // For other recomps using this repo as an example, you can omit the decompression routine and
 // set the corresponding fields in the GameEntry if the game doesn't have compressed code,
 // even if it does have compressed data.
-std::vector<uint8_t> zelda64::decompress_mm(std::span<const uint8_t> compressed_rom) {
+/*std::vector<uint8_t> zelda64::decompress_mm(std::span<const uint8_t> compressed_rom) {
     // Sanity check the rom size and header. These should already be correct from the runtime's check,
     // but it should prevent this file from accidentally being copied to another recomp.
     if (compressed_rom.size() != 0x2000000) {
@@ -165,4 +165,4 @@ std::vector<uint8_t> zelda64::decompress_mm(std::span<const uint8_t> compressed_
     std::fill(ret.begin() + content_end, ret.end(), 0xFF);
 
     return ret;
-}
+}*/

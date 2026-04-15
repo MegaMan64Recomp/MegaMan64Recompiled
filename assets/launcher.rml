@@ -14,6 +14,7 @@
 	<body>
 		<div id="window" data-model="launcher_model">
 			<div class="launcher">
+			<svg src="MegaMan64.svg" class="launcher-background" />
 				<div class="launcher__vertical-split">
 					<div class="launcher__title-quadrant">
 						<button class="subtitle-title" disabled>
@@ -24,9 +25,10 @@
 				</div>
 				<div class="launcher__vertical-split launcher__vertical-split--right">
 					<div class="launcher__background-wrapper">
-						<svg src="mm-clipped.svg" class="launcher__background-mm" />
 					</div>
 					<div class="launcher__title-quadrant launcher__title-quadrant--right">
+						<button class="subtitle-title subtitle-title--right" selected>
+						</button>
 					</div>
 					<div class="launcher__content-quadrant">
 						<button data-if="!mm_rom_valid" onclick="select_rom" class="menu-list-item menu-list-item--right" autofocus>
@@ -44,6 +46,10 @@
 						<button onclick="open_settings" class="menu-list-item menu-list-item--right">
 							<div class="menu-list-item__bullet">•</div>
 							<div class="menu-list-item__label">Settings</div>
+						</button>
+						<button onclick="open_mods" class="menu-list-item menu-list-item--right">
+							<div class="menu-list-item__bullet">•</div>
+							<div class="menu-list-item__label">Mods</div>
 						</button>
 						<button onclick="exit_game" class="menu-list-item menu-list-item--right">
 							<div class="menu-list-item__bullet">•</div>

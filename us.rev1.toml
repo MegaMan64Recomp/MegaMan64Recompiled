@@ -4,23 +4,22 @@
 entrypoint = 0x80025C00
 output_func_path = "RecompiledFuncs"
 symbols_file_path = "MegaMan64RecompSyms/megaman64.us.rev1.syms.toml"
-rom_file_path = "megaman64.us.z64"
+rom_file_path = "MegaMan64.us.rev1.z64"
 
 manual_funcs = [
 ]
 
 [patches]
 stubs = [
-	"func_80092EB0_6E2B0", # Stub function that checks RSP status?
-	"Graph_ThreadStop", # Function that stops the graphics thread
-	"func_80087590_62990" # Function that starts the graphics thread
+#	"func_80092EB0_6E2B0", # nuGfxTaskAllEndWait. Hangs indefinitly, likely due to threading issues
+	"Graph_ThreadStop", # Function that stops the graphics thread. Not currently support by N64Recomp
+	"func_80087590_62990", # Function that starts the graphics thread
 ]
 
 ignored = [
 ]
 
 # Hooks
-
 #Overlay loading
 [[patches.hook]]
 func = "Overlay_Loader"
@@ -33,26 +32,146 @@ func = "func_8008A02C_6542C"
 before_vram = 0x8008A0E8
 text = "yield_self(rdram);"
 
-#Hacky RT64 FPS fix
+#Tagging - Terrain
 [[patches.hook]]
-func = "func_800276EC_2AEC"
-before_vram = 0x800277AC
-text = """
-		MEM_W(0X8, ctx->r3) =  0xE0525464;
-		MEM_W(0XC, ctx->r3) =  0x10000064;
-		MEM_W(0X10, ctx->r3) = 0x64000009;
-		MEM_W(0X14, ctx->r3) = 0x0000001E;
+func = "func_8003912C_1452C"
+before_vram = 0x80039DE0
+text= """
+	{
+		recomp_context savedContext1 = *ctx;
+		ctx->r4=ctx->r22; //Tile X
+		ctx->r5=ctx->r30; //Tile Y
+		recomp_tag_terrain(rdram, ctx);
+		*ctx = savedContext1;
+	}
+	"""
+
+#Tagging - Terrain
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039E54
+text= """
+	{
+		recomp_context savedContext2 = *ctx;
+		ctx->r4=ctx->r22; //Tile X
+		ctx->r5=ctx->r30; //Tile Y
+		recomp_tag_terrain(rdram, ctx);
+		*ctx = savedContext2;
+	}
+	"""
+
+#Tagging - Terrain
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039EB0
+text= """
+	{
+		recomp_context savedContext3 = *ctx;
+		ctx->r4=ctx->r22; //Tile X
+		ctx->r5=ctx->r30; //Tile Y
+		recomp_tag_terrain(rdram, ctx);
+		*ctx = savedContext3;
+	}
+	"""
+
+#Tagging - Terrain Transparent
+[[patches.hook]]
+func = "func_8007E8D4_59CD4"
+before_vram = 0x8007F0A8
+text= """
+	{
+		recomp_context savedContext1 = *ctx;
+		ctx->r4=ctx->r16;
+		recomp_tag_terrain_transparent(rdram, ctx);
+		*ctx = savedContext1;
+	}
+	"""
+
+#Tagging - Terrain Transparent
+[[patches.hook]]
+func = "func_8007E8D4_59CD4"
+before_vram = 0x8007F17C
+text= """
+	{
+		recomp_context savedContext2 = *ctx;
+		ctx->r4=ctx->r16;
+		recomp_tag_terrain_transparent(rdram, ctx);
+		*ctx = savedContext2;
+	}
+	"""
+
+#Tagging - MegaMan Body
+[[patches.hook]]
+func = "func_80084870_5FC70"
+before_vram = 0x80084960
+text =  """
+		ctx->r4 = 0x4D454743;
+		set_curr_gfx_tag(rdram, ctx);
 		"""
 
-#Hacky RT64 FPS fix
+#Tagging - MegaMan Face
+[[patches.hook]]
+func = "func_8008498C_5FD8C"
+before_vram = 0x80084B5C
+text =  """
+		ctx->r4 = 0x4D454743;
+		set_curr_gfx_tag(rdram, ctx);
+		"""
+
+#Tagging - MegaMan Mouth
+[[patches.hook]]
+func = "func_8008498C_5FD8C"
+before_vram = 0x80084CAC
+text =  """
+		ctx->r4 = 0x4D454743;
+		set_curr_gfx_tag(rdram, ctx);
+		"""
+
+#Tagging - Embed Tag into Sprite BufferObj padding
+[[patches.hook]]
+func = "func_80028220_3620"
+before_vram = 0x800283A0
+text =	"""
+			MEM_W(0X14, ctx->r4) = get_curr_gfx_tag(rdram, ctx);
+			clear_curr_gfx_tag(rdram, ctx);
+		"""
+
+#Minimap cells alignment, don't apply alignment if opening the larger map
+[[patches.hook]]
+func = "func_8004AB78_25F78"
+before_vram = 0x8004ABE0
+text =	"""
+			if (MEM_B(0xFFFFFFFF801BC3E8, 0) != 7) {
+				recomp_context savedCtx = *ctx;
+				recomp_insert_ui_elem_alignment(rdram, ctx);
+				*ctx = savedCtx;
+			}
+		"""
+
+#Minimap Background Rect alignment
+[[patches.hook]]
+func = "func_8004B408_26808"
+before_vram = 0x8004B410
+text =	"""
+			recomp_context savedCtx = *ctx;
+			recomp_insert_ui_elem_alignment(rdram, ctx);
+			*ctx = savedCtx;
+		"""
+
+#Stretch Sky Rectangles
+[[patches.hook]]
+func = "func_8002E8FC_9CFC"
+before_vram = 0x8002E930
+text =	"rect_aspect_stretch(rdram, ctx);"
+
+#Reset Stretch Sky Rectangles
+[[patches.hook]]
+func = "func_8002E8FC_9CFC"
+before_vram = 0x8002ED7C
+text =	"rect_aspect_auto(rdram, ctx);"
+
+#Disable texture LOD
 [[patches.instruction]]
-func = "func_800276EC_2AEC"
-vram = 0x80027798
-value = 0x24620018 # addiu $v0 ,$v1 ,0x18
-
-
-##Reduce Fog thickness
-#[[patches.instruction]]
-#func = "func_800276EC_2AEC"
-#vram = 0x80027C68
-#value = 0x34841400 # ori $a0, $a0, 0xF400
+func = "func_8003912C_1452C"
+vram = 0x80039CDC
+value = 0x00000000 # nop

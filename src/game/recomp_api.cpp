@@ -8,14 +8,27 @@
 #include "zelda_render.h"
 #include "zelda_sound.h"
 #include "librecomp/helpers.hpp"
-#include "../patches/input.h"
-#include "../patches/graphics.h"
-#include "../patches/sound.h"
+// #include "../patches/input.h"
+// #include "../patches/graphics.h"
+// #include "../patches/sound.h"
 #include "ultramodern/ultramodern.hpp"
 #include "ultramodern/config.hpp"
 
 extern "C" void recomp_update_inputs(uint8_t* rdram, recomp_context* ctx) {
     recomp::poll_inputs();
+}
+
+extern "C" void sqrtf_recomp(uint8_t* rdram, recomp_context* ctx) {
+    ctx->f0.fl = sqrtf(ctx->f12.fl);
+}
+
+extern "C" void __ll_rshift_recomp(uint8_t * rdram, recomp_context * ctx) {
+    int64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+    int64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+    int64_t ret = a >> b;
+
+    ctx->r2 = (int32_t)(ret >> 32);
+    ctx->r3 = (int32_t)(ret >> 0);
 }
 
 extern "C" void recomp_puts(uint8_t* rdram, recomp_context* ctx) {
@@ -86,6 +99,38 @@ extern "C" void recomp_get_target_aspect_ratio(uint8_t* rdram, recomp_context* c
     }
 }
 
+extern "C" void recomp_get_target_hud_aspect_ratio(uint8_t* rdram, recomp_context* ctx) {
+    ultramodern::renderer::GraphicsConfig graphics_config = ultramodern::renderer::get_graphics_config();
+    float original = _arg<0, float>(rdram, ctx);
+    float current;
+    int width, height;
+    recompui::get_window_size(width, height);
+
+    if (graphics_config.ar_option == ultramodern::renderer::AspectRatio::Original) {
+        _return(ctx, original);
+        return;
+    }
+
+    current = static_cast<float>(width) / height;
+
+    switch (graphics_config.hr_option) {
+        case ultramodern::renderer::HUDRatioMode::Original:
+        default:
+            _return(ctx, original);
+            return;
+        case ultramodern::renderer::HUDRatioMode::Clamp16x9:
+            if (current < (16.0f / 9.0f)) {
+                _return(ctx, std::max(current, original));
+            } else {
+                _return(ctx, 16.0f / 9.0f);
+            }
+            return;
+        case ultramodern::renderer::HUDRatioMode::Full:
+            _return(ctx, std::max(current, original));
+            return;
+    }
+}
+
 extern "C" void recomp_get_targeting_mode(uint8_t* rdram, recomp_context* ctx) {
     _return(ctx, static_cast<int>(zelda64::get_targeting_mode()));
 }
@@ -94,16 +139,16 @@ extern "C" void recomp_get_bgm_volume(uint8_t* rdram, recomp_context* ctx) {
     _return(ctx, zelda64::get_bgm_volume() / 100.0f);
 }
 
-extern "C" void recomp_get_low_health_beeps_enabled(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, static_cast<u32>(zelda64::get_low_health_beeps_enabled()));
+/*extern "C" void recomp_get_sfx_volume(uint8_t* rdram, recomp_context* ctx) {
+    _return(ctx, zelda64::get_sfx_volume() / 100.0f);
 }
+
+extern "C" void recomp_get_voice_volume(uint8_t* rdram, recomp_context* ctx) {
+    _return(ctx, zelda64::get_voice_volume() / 100.0f);
+}*/
 
 extern "C" void recomp_time_us(uint8_t* rdram, recomp_context* ctx) {
     _return(ctx, static_cast<u32>(std::chrono::duration_cast<std::chrono::microseconds>(ultramodern::time_since_start()).count()));
-}
-
-extern "C" void recomp_get_autosave_enabled(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, static_cast<s32>(zelda64::get_autosave_mode() == zelda64::AutosaveMode::On));
 }
 
 extern "C" void recomp_load_overlays(uint8_t * rdram, recomp_context * ctx) {
@@ -126,24 +171,25 @@ extern "C" void recomp_get_inverted_axes(uint8_t* rdram, recomp_context* ctx) {
     s32* x_out = _arg<0, s32*>(rdram, ctx);
     s32* y_out = _arg<1, s32*>(rdram, ctx);
 
-    zelda64::CameraInvertMode mode = zelda64::get_camera_invert_mode();
+    zelda64::RadioBoxMode mode = zelda64::get_radio_comm_box_mode();
 
-    *x_out = (mode == zelda64::CameraInvertMode::InvertX || mode == zelda64::CameraInvertMode::InvertBoth);
-    *y_out = (mode == zelda64::CameraInvertMode::InvertY || mode == zelda64::CameraInvertMode::InvertBoth);
+    // *x_out = (mode == zelda64::AimInvertMode::InvertX || mode == zelda64::AimInvertMode::InvertBoth);
+    // *y_out = (mode == zelda64::AimInvertMode::InvertY || mode == zelda64::AimInvertMode::InvertBoth);
 }
+
 
 extern "C" void recomp_get_analog_inverted_axes(uint8_t* rdram, recomp_context* ctx) {
     s32* x_out = _arg<0, s32*>(rdram, ctx);
     s32* y_out = _arg<1, s32*>(rdram, ctx);
 
-    zelda64::CameraInvertMode mode = zelda64::get_analog_camera_invert_mode();
+    zelda64::AimInvertMode mode = zelda64::get_analog_camera_invert_mode();
 
-    *x_out = (mode == zelda64::CameraInvertMode::InvertX || mode == zelda64::CameraInvertMode::InvertBoth);
-    *y_out = (mode == zelda64::CameraInvertMode::InvertY || mode == zelda64::CameraInvertMode::InvertBoth);
+    // *x_out = (mode == zelda64::AimInvertMode::InvertX || mode == zelda64::AimInvertMode::InvertBoth);
+    // *y_out = (mode == zelda64::AimInvertMode::InvertY || mode == zelda64::AimInvertMode::InvertBoth);
 }
 
-extern "C" void recomp_get_analog_cam_enabled(uint8_t* rdram, recomp_context* ctx) {
-    _return<s32>(ctx, zelda64::get_analog_cam_mode() == zelda64::AnalogCamMode::On);
+extern "C" void recomp_get_invert_y_axis_mode(uint8_t* rdram, recomp_context* ctx) {
+    _return<s32>(ctx, zelda64::get_invert_y_axis_mode() == zelda64::AimInvertMode::On);
 }
 
 extern "C" void recomp_get_camera_inputs(uint8_t* rdram, recomp_context* ctx) {
