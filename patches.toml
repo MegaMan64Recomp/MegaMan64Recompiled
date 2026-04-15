@@ -3,7 +3,7 @@
 [input]
 # Paths are relative to the location of this config file.
 elf_path = "patches/patches.elf"
-rom_file_path = "megaman64.us.z64"
+rom_file_path = "MegaMan64.us.rev1.z64"
 output_func_path = "RecompiledPatches"
 single_file_output = true
 

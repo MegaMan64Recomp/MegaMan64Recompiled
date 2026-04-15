@@ -13,6 +13,9 @@
 [submodule "lib/rt64"]
 	path = lib/rt64
 	url = https://github.com/rt64/rt64.git
+[submodule "lib/MegaMan64Decomp"]
+	path = lib/MegaMan64Decomp
+	url = https://github.com/MegaMan64Recomp/MegaMan64Decomp.git
 [submodule "MegaMan64RecompSyms"]
 	path = MegaMan64RecompSyms
-	url = https://github.com/RaieFox/MegaMan64RecompSyms.git
+	url = https://github.com/MegaMan64Recomp/MegaMan64RecompSyms.git

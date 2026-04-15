@@ -54,7 +54,7 @@
 
 #include "../../lib/rt64/src/contrib/stb/stb_image.h"
 
-const std::string version_string = "1.0.0-alpha";
+const std::string version_string = "1.0.0-beta";
 
 template<typename... Ts>
 void exit_error(const char* str, Ts ...args) {
@@ -637,7 +637,7 @@ int main(int argc, char** argv) {
     reset_audio(48000);
 
     // Source controller mappings file
-    if (SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt") < 0) {
+    if (SDL_GameControllerAddMappingsFromFile("recompcontrollerdb.txt") < 0) {
         fprintf(stderr, "Failed to load controller mappings: %s\n", SDL_GetError());
     }
 
@@ -649,7 +649,8 @@ int main(int argc, char** argv) {
     }
 
     REGISTER_FUNC(recomp_get_window_resolution);
-    //REGISTER_FUNC(recomp_get_target_aspect_ratio);
+    REGISTER_FUNC(recomp_get_target_aspect_ratio);
+    REGISTER_FUNC(recomp_get_target_hud_aspect_ratio);
     //REGISTER_FUNC(recomp_get_target_framerate);
     //REGISTER_FUNC(recomp_get_autosave_enabled);
     //REGISTER_FUNC(recomp_get_analog_cam_enabled);
@@ -746,18 +747,21 @@ int main(int argc, char** argv) {
     }
     printf("\n");
 
-    recomp::start(
-        project_version,
-        {},
-        rsp_callbacks,
-        renderer_callbacks,
-        audio_callbacks,
-        input_callbacks,
-        gfx_callbacks,
-        thread_callbacks,
-        error_handling_callbacks,
-        threads_callbacks
-    );
+    recomp::Configuration cfg{
+        .project_version = project_version,
+        .window_handle = {},
+        .rsp_callbacks = rsp_callbacks,
+        .renderer_callbacks = renderer_callbacks,
+        .audio_callbacks = audio_callbacks,
+        .input_callbacks = input_callbacks,
+        .gfx_callbacks = gfx_callbacks,
+        .events_callbacks = thread_callbacks,
+        .error_handling_callbacks = error_handling_callbacks,
+        .threads_callbacks = threads_callbacks,
+        .message_queue_control = {},
+    };
+
+    recomp::start(cfg);
 
     NFD_Quit();
 

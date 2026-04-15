@@ -1,18 +1,8 @@
 #include "patches.h"
+#include "libc/stdarg.h"
 #include "misc_funcs.h"
-
-// #define va_list __builtin_va_list
-// #define va_start __builtin_va_start
-// #define va_arg __builtin_va_arg
-// #define va_end __builtin_va_end
-//
-// typedef unsigned int size_t;
-//
-// typedef char *outfun(char*,const char*,size_t);
-//
-// extern int _Printf(outfun prout, char *arg, const char *fmt, va_list args);
-
-// int _Printf(outfun prout, char *arg, const char *fmt, va_list args);
+extern s32 D_801BC17C_19757C;
+typedef char *outfun(char*,const char*,size_t);
 
 int _Printf(outfun prout, char *arg, const char *fmt, va_list args);
 
@@ -31,4 +21,3 @@ RECOMP_EXPORT int recomp_printf(const char* fmt, ...) {
 
     return ret;
 }
-
