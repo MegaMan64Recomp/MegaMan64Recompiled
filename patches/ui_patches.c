@@ -230,6 +230,7 @@ RECOMP_EXPORT void recomp_set_ui_rect_alignment(u32 alignmentFlag) {
     switch (alignmentFlag) {
         case HEALTH_BAR:
         case MINIMAP:
+        case ROLL_HEALTH_BAR:
             gEXSetRectAlign(D_801A90F0_1844F0++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_LEFT, 0, 0, 0, 0);
             break;
         case ENERGY_BAR:
