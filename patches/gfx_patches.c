@@ -225,6 +225,7 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
         gEXSetRDRAMExtended(D_801A90F0_1844F0++, TRUE);
         gEXSetRefreshRate(D_801A90F0_1844F0++, 30);
         gEXForceTrueBilerp(D_801A90F0_1844F0++, G_EX_BILERP_ONLY);
+        gEXSetNearClipping(D_801A90F0_1844F0++, 0);
         // recomp_printf("-----Begin Frame----- \n");
         //@recomp check if the camera has jumped this frame
         recomp_check_camera_jump();
@@ -392,12 +393,11 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
 
 void recomp_interp(u32 id) {
     if (all_interpolation_skipped()) {
-        gEXMatrixGroupNoInterpolate(D_801A90F0_1844F0++, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+        gEXMatrixGroupSkipAll(D_801A90F0_1844F0++, G_EX_ID_IGNORE, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+    } else if (id != 0){
+        gEXMatrixGroupDecomposedNormal(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     } else {
-        gEXMatrixGroupDecomposed(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_COMPONENT_INTERPOLATE,
-                                 G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
-                                 G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE,
-                                 G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
+        gEXMatrixGroupSkipAll(D_801A90F0_1844F0++, G_EX_ID_IGNORE, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     }
 }
 

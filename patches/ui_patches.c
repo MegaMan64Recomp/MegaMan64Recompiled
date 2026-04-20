@@ -18,6 +18,7 @@ typedef enum {
     HEALTH_BAR,
     ENERGY_BAR,
     BOSS_HEALTH_BAR,
+    ROLL_HEALTH_BAR,
     MINIMAP,
 } UIAlignTypes;
 
@@ -229,6 +230,7 @@ RECOMP_EXPORT void recomp_set_ui_rect_alignment(u32 alignmentFlag) {
     switch (alignmentFlag) {
         case HEALTH_BAR:
         case MINIMAP:
+        case ROLL_HEALTH_BAR:
             gEXSetRectAlign(D_801A90F0_1844F0++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_LEFT, 0, 0, 0, 0);
             break;
         case ENERGY_BAR:
@@ -493,7 +495,9 @@ RECOMP_PATCH void func_80048C7C_2407C(void) {
     }
 
     if (D_801BC714_197B14.status & 2) {
+        gCurrentUIElement = ROLL_HEALTH_BAR;
         func_80049B38_24F38(&D_801BC714_197B14);
+        gCurrentUIElement = 0;
     }
 }
 
