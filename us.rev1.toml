@@ -170,6 +170,17 @@ func = "func_8002E8FC_9CFC"
 before_vram = 0x8002ED7C
 text =	"rect_aspect_auto(rdram, ctx);"
 
+#Tag Juno fireball shockwave
+[[patches.hook]]
+func = "func_802451EC_ovl28"
+before_vram = 0x802452f4
+text =	"""
+		recomp_context savedCtx = *ctx;
+		ctx->r4 = 0x46495245;
+		set_curr_gfx_tag(rdram, ctx);
+		*ctx = savedCtx;
+		"""
+
 #Disable texture LOD
 [[patches.instruction]]
 func = "func_8003912C_1452C"
