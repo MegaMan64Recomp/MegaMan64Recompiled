@@ -226,7 +226,6 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
         gEXSetRDRAMExtended(D_801A90F0_1844F0++, TRUE);
         gEXSetRefreshRate(D_801A90F0_1844F0++, 30);
         gEXForceTrueBilerp(D_801A90F0_1844F0++, G_EX_BILERP_ONLY);
-        gEXSetNearClipping(D_801A90F0_1844F0++, 0);
         // recomp_printf("-----Begin Frame----- \n");
         //@recomp check if the camera has jumped this frame
         recomp_check_camera_jump();
