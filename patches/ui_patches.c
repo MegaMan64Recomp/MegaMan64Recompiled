@@ -832,6 +832,9 @@ RECOMP_PATCH void func_8002ED90_A190(UIElemQuad *quad) {
                 } else {
                     gSP2Triangles(D_801A90F0_1844F0++, 0, 2, 1, 0, 2, 3, 1, 0);
                 }
+
+                //Reset the projection matrix to its previous state (fix for fadeout effect)
+                gSPMatrix(D_801A90F0_1844F0++, &gfxContext->projectionMtx, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
             }
             break;
 
