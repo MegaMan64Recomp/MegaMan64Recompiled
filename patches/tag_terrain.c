@@ -2,7 +2,6 @@
 #include "common_structs.h"
 #include "tag_terrain.h"
 #include "tag_helper.h"
-#include "patches.h"
 
 // extern u32 gCurrGfxTag;
 extern bool skip_terrain_interpolation;

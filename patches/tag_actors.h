@@ -66,7 +66,7 @@ extern EffectActor *D_80206B48_1E1F48;
 extern s32 D_801BC3BC_1977BC;
 extern u16 D_801ADC80_189080;
 extern u16 D_802049AC_1DFDAC;
-extern UnkSpriteStruct* D_80210480_1EB880;
+extern UnkSpriteStruct* D_80210480_1EB880[];
 extern void* D_801FF364_1DA764;
 extern void func_800805F8_5B9F8;
 

@@ -1,8 +1,6 @@
 #ifndef TAGGING_H
 #define TAGGING_H
 
-#include "ultra64.h"
-
 extern u32 gCurrGfxTag;
 
 #define ACTOR_TAG_ID 0x1
