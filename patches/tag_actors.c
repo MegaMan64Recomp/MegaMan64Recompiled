@@ -21,8 +21,8 @@ RECOMP_PATCH void func_8003A7CC_15BCC(void) {
             multipartActorCount--;
             if (multiActorPtr->renderFlag & multiActorPtr->unkFlag & 2) {
                 //@recomp Tag multipart actors
-                gCurrGfxTag = TAG_MULTIPART_ACTOR(multiActorPtr);
-                gCurrentActorTag = TAG_MULTIPART_ACTOR(multiActorPtr);
+                gCurrGfxTag = TAG_BOSS_ACTOR(multiActorPtr);
+                gCurrentActorTag = TAG_BOSS_ACTOR(multiActorPtr);
                 // recomp_printf("Multipart Actor Tag=%X\n",gCurrGfxTag);
                 func_8003A2EC_156EC(multiActorPtr);
                 gCurrentActorTag = 0;
@@ -162,7 +162,7 @@ RECOMP_PATCH void func_8004C270_27670(void) {
 RECOMP_PATCH void func_8003B994_16D94(void) {
     s32 iter;
     s32 value;
-    UnkSpriteStruct* temp_s0;
+    UnkSpriteStruct* sprite;
     UnkSpriteStruct** ptr;
 
     iter = 0;
@@ -171,16 +171,16 @@ RECOMP_PATCH void func_8003B994_16D94(void) {
         value = 0x02FFFFFF;
         ptr = &D_80210480_1EB880;
         do {
-            temp_s0 = *ptr;
-            if ((temp_s0->unkUnion.unk4Bytes[0] >> 5) & 1) {
-                gCurrGfxTag = (s32) temp_s0;
+            sprite = *ptr;
+            if ((sprite->unkUnion.unk4Bytes[0] >> 5) & 1) {
+                gCurrGfxTag = TAG_SPRITE(sprite->unk0);
                 // recomp_printf("Sprite Tag = %X \n", gCurrGfxTag);
-                func_800859B0_60DB0(temp_s0);
-                temp_s0->unkUnion.unk4 &= value;
+                func_800859B0_60DB0(sprite);
+                sprite->unkUnion.unk4 &= value;
             } else {
-                func_80086110_61510(temp_s0);
-                temp_s0->unkUnion.unk4 &= value;
-                temp_s0->unk18 &= value;
+                func_80086110_61510(sprite);
+                sprite->unkUnion.unk4 &= value;
+                sprite->unk18 &= value;
             }
             iter += 1;
             ptr += 1;
