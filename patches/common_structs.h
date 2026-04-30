@@ -33,6 +33,10 @@ typedef struct {
 } Vec2s;
 
 typedef struct {
+    s16 x,y,z;
+} Vec3s;
+
+typedef struct {
     /* 0x000 */ s8 tempFiller1[8];
     /* 0x008 */ s32 animation;
     /* 0x00C */ s8 tempFiller2[8];
