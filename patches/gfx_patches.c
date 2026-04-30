@@ -402,8 +402,10 @@ void recomp_interp(u32 id) {
                 gEXMatrixGroupDecomposedNormal(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
             }
             break;
+        case SPRITE_TAG_ID:
         case 0:
             gEXMatrixGroupSkipAll(D_801A90F0_1844F0++, G_EX_ID_IGNORE, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+            break;
         default:
             gEXMatrixGroupDecomposedNormal(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     }
