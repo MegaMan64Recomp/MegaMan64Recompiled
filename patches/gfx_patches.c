@@ -4,6 +4,7 @@
 #include "gfx_patches.h"
 
 bool skip_all_interpolation = FALSE;
+bool skip_terrain_interpolation = FALSE;
 
 void recomp_check_camera_jump();
 
@@ -331,13 +332,9 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
                                     }
                                     sp14 = D_80193C30_16F030;
                                     //@recomp Basic Tagging, read ID from the padding
-                                    if (gfxTaskNode->unk14 != 0) {
-                                        recomp_interp(gfxTaskNode->unk14);
-                                        gfxTaskNode->func(gfxTaskNode->arg);
-                                        gEXPopMatrixGroup(D_801A90F0_1844F0++, G_MTX_MODELVIEW);
-                                    } else {
-                                        gfxTaskNode->func(gfxTaskNode->arg);
-                                    }
+                                    recomp_interp(gfxTaskNode->unk14);
+                                    gfxTaskNode->func(gfxTaskNode->arg);
+                                    gEXPopMatrixGroup(D_801A90F0_1844F0++, G_MTX_MODELVIEW);
                                     gfxTaskNode = gfxTaskNode->next;
                                 }
                             } while (gfxTaskNode != NULL);
@@ -387,17 +384,30 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
 
     //@recomp reset the interpolation flag after rendering frame
     set_all_interpolation_skipped(FALSE);
-    // recomp_printf("-----End Frame----- \n");
+    skip_terrain_interpolation = FALSE;
+    recomp_printf("-----End Frame----- \n");
 }
 
 void recomp_interp(u32 id) {
     if (all_interpolation_skipped()) {
-        gEXMatrixGroupNoInterpolate(D_801A90F0_1844F0++, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
-    } else {
-        gEXMatrixGroupDecomposed(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_COMPONENT_INTERPOLATE,
-                                 G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
-                                 G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE,
-                                 G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO);
+        gEXMatrixGroupSkipAll(D_801A90F0_1844F0++, G_EX_ID_IGNORE, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+        return;
+    }
+
+    switch (GET_TAG_ID(id)) {
+        case TERRAIN_TAG_ID:
+            if (skip_terrain_interpolation) {
+                gEXMatrixGroupSkipAll(D_801A90F0_1844F0++, G_EX_ID_IGNORE, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+            } else {
+                gEXMatrixGroupDecomposedNormal(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+            }
+            break;
+        case SPRITE_TAG_ID:
+        case 0:
+            gEXMatrixGroupSkipAll(D_801A90F0_1844F0++, G_EX_ID_IGNORE, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+            break;
+        default:
+            gEXMatrixGroupDecomposedNormal(D_801A90F0_1844F0++, id, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     }
 }
 

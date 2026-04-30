@@ -4,7 +4,7 @@ CC      ?= clang
 LD      ?= ld.lld
 
 GBI_DEFINE := -DF3DEX_GBI_2
-CFLAGS   := -target mips -mips2 -mabi=32 -O2 -G0 -mno-abicalls -mno-odd-spreg -mno-check-zero-division \
+CFLAGS   := -target mips -mips2 -mabi=32 -O3 -G0 -mno-abicalls -mno-odd-spreg -mno-check-zero-division \
 			-fomit-frame-pointer -ffast-math -fno-unsafe-math-optimizations -fno-builtin-memset \
 			-Wall -Wextra -Wno-incompatible-library-redeclaration -Wno-unused-parameter -Wno-unknown-pragmas -Wno-unused-variable -Wno-missing-braces -Wno-unsupported-floating-point-opt
 CPPFLAGS := -nostdinc -D_LANGUAGE_C -DMIPS -I../lib/rt64/include -I../lib/MegaMan64Decomp/lib/libultra/include -I../lib/MegaMan64Decomp/include -I../lib/N64ModernRuntime/ultramodern/include $(GBI_DEFINE)

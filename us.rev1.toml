@@ -127,6 +127,17 @@ text =  """
 		set_curr_gfx_tag(rdram, ctx);
 		"""
 
+#Tag Juno fireball shockwave
+[[patches.hook]]
+func = "func_802451EC_ovl28"
+before_vram = 0x802452f4
+text =	"""
+		recomp_context savedCtx = *ctx;
+		ctx->r4 = 0x46495245;
+		set_curr_gfx_tag(rdram, ctx);
+		*ctx = savedCtx;
+		"""
+
 #Tagging - Embed Tag into Sprite BufferObj padding
 [[patches.hook]]
 func = "func_80028220_3620"
