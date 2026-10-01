@@ -44,6 +44,7 @@
 #include "../../patches/input.h"
 #include "../../patches/sound.h"
 #include "../../patches/misc_funcs.h"
+#include "../../patches/mouse_camera.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -660,6 +661,11 @@ int main(int argc, char** argv) {
     //REGISTER_FUNC(recomp_get_low_health_beeps_enabled);
     //REGISTER_FUNC(recomp_get_gyro_deltas);
     //REGISTER_FUNC(recomp_get_mouse_deltas);
+    REGISTER_FUNC(recomp_get_mouse_camera_mode);
+    REGISTER_FUNC(recomp_get_mouse_camera_deltas);
+    REGISTER_FUNC(recomp_get_mouse_camera_fov);
+    REGISTER_FUNC(recomp_get_mouse_camera_aim);
+    REGISTER_FUNC(recomp_get_mouse_camera_wheel);
     //REGISTER_FUNC(recomp_get_inverted_axes);
     //REGISTER_FUNC(recomp_get_analog_inverted_axes);
 

@@ -76,6 +76,17 @@ namespace recomp {
     bool get_input_digital(const std::span<const recomp::InputField> fields);
     void get_gyro_deltas(float* x, float* y);
     void get_mouse_deltas(float* x, float* y);
+    // Returns the mouse movement since the previous call, scaled by the mouse sensitivity, and resets it.
+    void consume_mouse_camera_deltas(float* x, float* y);
+    // Mouse buttons only report as held while the mouse camera has the cursor captured.
+    bool get_mouse_button_held(int button);
+    bool keyboard_bindings_use_mouse();
+    // Right mouse button held for over the shoulder aiming, only in the third person mouse camera.
+    bool get_mouse_camera_aim_held();
+    // A quick right click in the third person mouse camera, which uses the special weapon.
+    bool get_mouse_camera_special_tap();
+    // Mouse wheel notches since the previous call, positive when scrolling up.
+    int consume_mouse_camera_wheel();
     void get_right_analog(float* x, float* y);
 
     enum class InputDevice {

@@ -88,6 +88,43 @@ namespace zelda64 {
         {zelda64::AnalogCamMode::Off, "Off"}
     });
 
+    // Values are shared with patches/mouse_camera.h.
+    enum class MouseCameraMode {
+        Off,
+        ThirdPerson,
+        FirstPerson,
+        OptionCount
+    };
+
+    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::MouseCameraMode, {
+        {zelda64::MouseCameraMode::Off, "Off"},
+        {zelda64::MouseCameraMode::ThirdPerson, "ThirdPerson"},
+        {zelda64::MouseCameraMode::FirstPerson, "FirstPerson"}
+    });
+
+    enum class FirstPersonStrafeMode {
+        On,
+        Off,
+        OptionCount
+    };
+
+    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::FirstPersonStrafeMode, {
+        {zelda64::FirstPersonStrafeMode::On, "On"},
+        {zelda64::FirstPersonStrafeMode::Off, "Off"}
+    });
+
+    FirstPersonStrafeMode get_first_person_strafe_mode();
+    void set_first_person_strafe_mode(FirstPersonStrafeMode mode);
+
+    // Horizontal field of view in degrees (at 4:3) used while the mouse camera is on.
+    int get_mouse_camera_fov();
+    void set_mouse_camera_fov(int fov);
+
+    MouseCameraMode get_mouse_camera_mode();
+    void set_mouse_camera_mode(MouseCameraMode mode);
+    // Swaps between first and third person. Does nothing while the mouse camera is off.
+    void toggle_mouse_camera_perspective();
+
     FilmGrainMode get_film_grain_mode();
     void set_film_grain_mode(FilmGrainMode mode);
 

@@ -1,4 +1,5 @@
 #include <atomic>
+#include <chrono>
 #include <mutex>
 
 #include "ultramodern/ultramodern.hpp"
@@ -37,6 +38,9 @@ static struct {
     std::mutex pending_input_mutex;
     std::array<float, 2> pending_rotation_delta{};
     std::array<float, 2> pending_mouse_delta{};
+    // Motion for the mouse camera, which is consumed once per game frame instead of once per input poll.
+    std::array<float, 2> mouse_camera_delta{};
+    std::chrono::steady_clock::time_point mouse_camera_last_consume{};
 
     float cur_rumble;
     bool rumble_active;
@@ -84,6 +88,18 @@ void queue_if_enabled(SDL_Event* event) {
 }
 
 static std::atomic_bool cursor_enabled = true;
+// True while the cursor is captured for the mouse camera, which is the only time mouse buttons reach the game.
+static std::atomic_bool mouse_camera_cursor_locked = false;
+// Bitmask of held mouse buttons, indexed by SDL_BUTTON_* values.
+static std::atomic_uint32_t mouse_buttons_held = 0;
+// Wheel notches for the mouse camera's third person zoom.
+static std::atomic_int mouse_camera_wheel = 0;
+// Third person mouse camera: a quick right click uses the special weapon, holding it aims over the shoulder.
+constexpr auto right_tap_threshold = std::chrono::milliseconds(200);
+// How long the special weapon button stays pressed after a quick click, so the game sees it.
+constexpr auto right_tap_pulse = std::chrono::milliseconds(100);
+static std::atomic<std::chrono::steady_clock::time_point> right_press_time{};
+static std::atomic<std::chrono::steady_clock::time_point> right_tap_time{};
 
 void recompui::set_cursor_visible(bool visible) {
     cursor_enabled.store(visible);
@@ -164,10 +180,40 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
         recompui::activate_mouse();
         break;
     }
+    case SDL_EventType::SDL_MOUSEBUTTONDOWN:
+        {
+            SDL_MouseButtonEvent* button_event = &event->button;
+            mouse_buttons_held.fetch_or(SDL_BUTTON(button_event->button));
+            if (scanning_device == recomp::InputDevice::Keyboard) {
+                set_scanned_input({(uint32_t)InputType::Mouse, button_event->button});
+                break;
+            }
+            if (button_event->button == SDL_BUTTON_MIDDLE && mouse_camera_cursor_locked) {
+                zelda64::toggle_mouse_camera_perspective();
+            }
+            if (button_event->button == SDL_BUTTON_RIGHT) {
+                right_press_time = std::chrono::steady_clock::now();
+            }
+        }
+        queue_if_enabled(event);
+        break;
+    case SDL_EventType::SDL_MOUSEBUTTONUP:
+        mouse_buttons_held.fetch_and(~SDL_BUTTON(event->button.button));
+        if (event->button.button == SDL_BUTTON_RIGHT && mouse_camera_cursor_locked) {
+            auto now = std::chrono::steady_clock::now();
+            if (now - right_press_time.load() < right_tap_threshold) {
+                right_tap_time = now;
+            }
+        }
+        queue_if_enabled(event);
+        break;
     case SDL_EventType::SDL_MOUSEWHEEL:
         {
             SDL_MouseWheelEvent* wheel_event = &event->wheel;    
             InputState.mouse_wheel_pos.fetch_add(wheel_event->y * (wheel_event->direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1));
+            if (mouse_camera_cursor_locked) {
+                mouse_camera_wheel.fetch_add(wheel_event->y * (wheel_event->direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1));
+            }
         }
         queue_if_enabled(event);
         break;
@@ -274,6 +320,8 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
             std::lock_guard lock{ InputState.pending_input_mutex };
             InputState.pending_mouse_delta[0] += motion_event->xrel;
             InputState.pending_mouse_delta[1] += motion_event->yrel;
+            InputState.mouse_camera_delta[0] += motion_event->xrel;
+            InputState.mouse_camera_delta[1] += motion_event->yrel;
         }
         queue_if_enabled(event);
         break;
@@ -305,8 +353,9 @@ void recomp::handle_events() {
     while (SDL_PollEvent(&cur_event) && !exited) {
         exited = sdl_event_filter(nullptr, &cur_event);
 
-        // Lock the cursor if all three conditions are true: mouse aiming is enabled, game input is not disabled, and the game has been started. 
-        bool cursor_locked = (recomp::get_mouse_sensitivity() != 0) && !recomp::game_input_disabled() && ultramodern::is_game_started();
+        // Lock the cursor if all three conditions are true: the mouse camera is enabled, game input is not disabled, and the game has been started. 
+        bool cursor_locked = (zelda64::get_mouse_camera_mode() != zelda64::MouseCameraMode::Off) && !recomp::game_input_disabled() && ultramodern::is_game_started();
+        mouse_camera_cursor_locked = cursor_locked;
 
         // Hide the cursor based on its enable state, but override visibility to false if the cursor is locked.
         bool cursor_visible = cursor_enabled;
@@ -334,7 +383,8 @@ const recomp::DefaultN64Mappings recomp::default_n64_keyboard_mappings = {
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_SPACE}
     },
     .b = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LSHIFT}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LSHIFT},
+        {.input_type = (uint32_t)InputType::Mouse, .input_id = SDL_BUTTON_LEFT}
     },
     .l = {
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_E}
@@ -349,7 +399,8 @@ const recomp::DefaultN64Mappings recomp::default_n64_keyboard_mappings = {
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_RETURN}
     },
     .c_left = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LEFT}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LEFT},
+        {.input_type = (uint32_t)InputType::Mouse, .input_id = SDL_BUTTON_RIGHT}
     },
     .c_right = {
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_RIGHT}
@@ -578,6 +629,43 @@ bool controller_button_state(int32_t input_id) {
     return false;
 }
 
+bool mouse_button_state(int32_t input_id) {
+    if (!mouse_camera_cursor_locked || input_id < SDL_BUTTON_LEFT || input_id > SDL_BUTTON_X2) {
+        return false;
+    }
+    return (mouse_buttons_held.load() & SDL_BUTTON(input_id)) != 0;
+}
+
+bool recomp::keyboard_bindings_use_mouse() {
+    for (size_t input = 0; input < recomp::get_num_inputs(); input++) {
+        for (size_t binding = 0; binding < recomp::bindings_per_input; binding++) {
+            if (recomp::get_input_binding((recomp::GameInput)input, binding, recomp::InputDevice::Keyboard).input_type == (uint32_t)InputType::Mouse) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool recomp::get_mouse_camera_aim_held() {
+    return zelda64::get_mouse_camera_mode() == zelda64::MouseCameraMode::ThirdPerson && mouse_button_state(SDL_BUTTON_RIGHT) &&
+        std::chrono::steady_clock::now() - right_press_time.load() >= right_tap_threshold;
+}
+
+bool recomp::get_mouse_camera_special_tap() {
+    auto tap_time = right_tap_time.load();
+    return zelda64::get_mouse_camera_mode() == zelda64::MouseCameraMode::ThirdPerson &&
+        tap_time != std::chrono::steady_clock::time_point{} && std::chrono::steady_clock::now() - tap_time < right_tap_pulse;
+}
+
+int recomp::consume_mouse_camera_wheel() {
+    return mouse_camera_wheel.exchange(0);
+}
+
+bool recomp::get_mouse_button_held(int button) {
+    return mouse_button_state(button);
+}
+
 static std::atomic_bool right_analog_suppressed = false;
 
 float controller_axis_state(int32_t input_id, bool allow_suppression) {
@@ -623,8 +711,7 @@ float recomp::get_input_analog(const recomp::InputField& field) {
     case InputType::ControllerAnalog:
         return controller_axis_state(field.input_id, true);
     case InputType::Mouse:
-        // TODO mouse support
-        return 0.0f;
+        return mouse_button_state(field.input_id) ? 1.0f : 0.0f;
     case InputType::None:
         return false;
     }
@@ -654,8 +741,7 @@ bool recomp::get_input_digital(const recomp::InputField& field) {
         // TODO adjustable threshold
         return controller_axis_state(field.input_id, true) >= axis_threshold;
     case InputType::Mouse:
-        // TODO mouse support
-        return false;
+        return mouse_button_state(field.input_id);
     case InputType::None:
         return false;
     }
@@ -681,6 +767,25 @@ void recomp::get_mouse_deltas(float* x, float* y) {
     float sensitivity = (float)recomp::get_mouse_sensitivity() / 100.0f;
     *x = cur_mouse_delta[0] * sensitivity;
     *y = cur_mouse_delta[1] * sensitivity;
+}
+
+void recomp::consume_mouse_camera_deltas(float* x, float* y) {
+    // Motion that piled up while the game wasn't reading it (cutscenes, loading) would snap the camera, so drop it.
+    constexpr auto stale_threshold = std::chrono::milliseconds(200);
+
+    std::array<float, 2> cur_delta;
+    {
+        std::lock_guard lock{ InputState.pending_input_mutex };
+        auto now = std::chrono::steady_clock::now();
+        bool stale = now - InputState.mouse_camera_last_consume > stale_threshold;
+        cur_delta = stale ? std::array<float, 2>{ 0.0f, 0.0f } : InputState.mouse_camera_delta;
+        InputState.mouse_camera_delta = { 0.0f, 0.0f };
+        InputState.mouse_camera_last_consume = now;
+    }
+
+    float sensitivity = (float)recomp::get_mouse_sensitivity() / 100.0f;
+    *x = cur_delta[0] * sensitivity;
+    *y = cur_delta[1] * sensitivity;
 }
 
 void recomp::apply_joystick_deadzone(float x_in, float y_in, float* x_out, float* y_out) {
@@ -893,6 +998,23 @@ std::string controller_axis_to_string(int axis) {
     }
 }
 
+std::string mouse_button_to_string(int32_t button) {
+    switch (button) {
+    case SDL_BUTTON_LEFT:
+        return PF_MOUSE_LEFT;
+    case SDL_BUTTON_RIGHT:
+        return PF_MOUSE_RIGHT;
+    case SDL_BUTTON_MIDDLE:
+        return PF_MOUSE_MIDDLE;
+    case SDL_BUTTON_X1:
+        return PF_MOUSE_4;
+    case SDL_BUTTON_X2:
+        return PF_MOUSE_5;
+    default:
+        return "Mouse " + std::to_string(button);
+    }
+}
+
 std::string recomp::InputField::to_string() const {
     switch ((InputType)input_type) {
         case InputType::None:
@@ -903,6 +1025,8 @@ std::string recomp::InputField::to_string() const {
             return controller_axis_to_string(input_id);
         case InputType::Keyboard:
             return keyboard_input_to_string((SDL_Scancode)input_id);
+        case InputType::Mouse:
+            return mouse_button_to_string(input_id);
         default:
             return std::to_string(input_type) + "," + std::to_string(input_id);
     }

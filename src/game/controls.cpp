@@ -2,6 +2,8 @@
 
 #include "librecomp/helpers.hpp"
 #include "recomp_input.h"
+#include "zelda_config.h"
+#include "SDL.h"
 #include "ultramodern/ultramodern.hpp"
 
 // Arrays that hold the mappings for every input for keyboard and controller respectively.
@@ -106,6 +108,33 @@ bool recomp::get_n64_input(int controller_num, uint16_t* buttons_out, float* x_o
 
         cur_y = recomp::get_input_analog(keyboard_input_mappings[(size_t)GameInput::Y_AXIS_POS])
                 - recomp::get_input_analog(keyboard_input_mappings[(size_t)GameInput::Y_AXIS_NEG]) + joystick_y;
+
+        // Configs made before mouse buttons could be bound have none, so give the mouse camera usable defaults.
+        if (!recomp::keyboard_bindings_use_mouse()) {
+            cur_buttons |= recomp::get_mouse_button_held(SDL_BUTTON_LEFT) ? n64_button_values[(size_t)GameInput::B - (size_t)GameInput::N64_BUTTON_START] : 0;
+            // In third person holding the right button aims over the shoulder instead, and a quick click uses the
+            // special weapon.
+            if (zelda64::get_mouse_camera_mode() == zelda64::MouseCameraMode::FirstPerson) {
+                cur_buttons |= recomp::get_mouse_button_held(SDL_BUTTON_RIGHT) ? n64_button_values[(size_t)GameInput::C_LEFT - (size_t)GameInput::N64_BUTTON_START] : 0;
+            }
+            else if (recomp::get_mouse_camera_special_tap()) {
+                cur_buttons |= n64_button_values[(size_t)GameInput::C_LEFT - (size_t)GameInput::N64_BUTTON_START];
+            }
+        }
+
+        // FPS style movement: sideways input strafes with the game's own L/R strafe instead of turning, since the
+        // mouse already turns Mega Man.
+        if (zelda64::get_mouse_camera_mode() == zelda64::MouseCameraMode::FirstPerson &&
+            zelda64::get_first_person_strafe_mode() == zelda64::FirstPersonStrafeMode::On) {
+            constexpr float strafe_threshold = 0.5f;
+            if (cur_x <= -strafe_threshold) {
+                cur_buttons |= n64_button_values[(size_t)GameInput::L - (size_t)GameInput::N64_BUTTON_START];
+            }
+            else if (cur_x >= strafe_threshold) {
+                cur_buttons |= n64_button_values[(size_t)GameInput::R - (size_t)GameInput::N64_BUTTON_START];
+            }
+            cur_x = 0.0f;
+        }
     }
 
     *buttons_out = cur_buttons;

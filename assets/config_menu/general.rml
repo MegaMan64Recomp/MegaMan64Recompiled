@@ -104,6 +104,116 @@
                         </div>
                     </div>
 
+                    <!-- mouse camera -->
+                    <div class="config-option" data-event-mouseover="set_cur_config_index(10)">
+                        <label class="config-option__title">Mouse Camera</label>
+                        <div class="config-option__list">
+                            <input
+                                type="radio"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(10)"
+                                name="mouse_camera_mode"
+                                data-checked="mouse_camera_mode"
+                                value="Off"
+                                id="mouse_camera_mode_off"
+                                style="nav-up: #invert_y_axis_mode_on; nav-down: #mouse_sensitivity_input"
+                            />
+                            <label class="config-option__tab-label" for="mouse_camera_mode_off">Off</label>
+
+                            <input
+                                type="radio"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(10)"
+                                name="mouse_camera_mode"
+                                data-checked="mouse_camera_mode"
+                                value="ThirdPerson"
+                                id="mouse_camera_mode_third"
+                                style="nav-up: #invert_y_axis_mode_on; nav-down: #mouse_sensitivity_input"
+                            />
+                            <label class="config-option__tab-label" for="mouse_camera_mode_third">Third Person</label>
+
+                            <input
+                                type="radio"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(10)"
+                                name="mouse_camera_mode"
+                                data-checked="mouse_camera_mode"
+                                value="FirstPerson"
+                                id="mouse_camera_mode_first"
+                                style="nav-up: #invert_y_axis_mode_off; nav-down: #mouse_sensitivity_input"
+                            />
+                            <label class="config-option__tab-label" for="mouse_camera_mode_first">First Person</label>
+                        </div>
+                    </div>
+
+                    <!-- mouse sensitivity -->
+                    <div class="config-option" data-event-mouseover="set_cur_config_index(3)">
+                        <label class="config-option__title">Mouse Sensitivity</label>
+                        <div class="config-option__range-wrapper config-option__list">
+                            <label class="config-option__range-label">{{mouse_sensitivity}}%</label>
+                            <input
+                                class="nav-vert"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(3)"
+                                id="mouse_sensitivity_input"
+                                type="range"
+                                min="0"
+                                max="100"
+                                style="flex: 1; margin: 0dp; nav-up: #mouse_camera_mode_off; nav-down: #first_person_strafe_mode_on"
+                                data-value="mouse_sensitivity"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- field of view -->
+                    <div class="config-option" data-event-mouseover="set_cur_config_index(12)">
+                        <label class="config-option__title">Field of View</label>
+                        <div class="config-option__range-wrapper config-option__list">
+                            <label class="config-option__range-label">{{mouse_camera_fov}}°</label>
+                            <input
+                                class="nav-vert"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(12)"
+                                id="mouse_camera_fov_input"
+                                type="range"
+                                min="45"
+                                max="110"
+                                style="flex: 1; margin: 0dp;"
+                                data-value="mouse_camera_fov"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- first person strafe -->
+                    <div class="config-option" data-event-mouseover="set_cur_config_index(11)">
+                        <label class="config-option__title">First Person Strafe</label>
+                        <div class="config-option__list">
+                            <input
+                                type="radio"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(11)"
+                                name="first_person_strafe_mode"
+                                data-checked="first_person_strafe_mode"
+                                value="On"
+                                id="first_person_strafe_mode_on"
+                                style="nav-up: #mouse_sensitivity_input"
+                            />
+                            <label class="config-option__tab-label" for="first_person_strafe_mode_on">On</label>
+
+                            <input
+                                type="radio"
+                                data-event-blur="set_cur_config_index(-1)"
+                                data-event-focus="set_cur_config_index(11)"
+                                name="first_person_strafe_mode"
+                                data-checked="first_person_strafe_mode"
+                                value="Off"
+                                id="first_person_strafe_mode_off"
+                                style="nav-up: #mouse_sensitivity_input"
+                            />
+                            <label class="config-option__tab-label" for="first_person_strafe_mode_off">Off</label>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Descriptions -->
@@ -121,10 +231,7 @@
                         <b>Note: To recalibrate controller gyro, set the controller down on a still, flat surface for 5 seconds.</b>
                     </p>
                     <p data-if="cur_config_index == 3">
-                        Controls the sensitivity of mouse aiming when using items in first person. <b>Setting this to zero will disable mouse aiming.</b>
-                        <br />
-                        <br />
-                        <b>Note: This option does not allow mouse buttons to activate items. Mouse aiming is intended to be used with inputs that are mapped to mouse movement, such as gyro on Steam Deck.</b>
+                        Controls how fast the <b>Mouse Camera</b> turns and tilts. <b>Setting this to zero will stop the mouse from moving the camera.</b>
                     </p>
                     <p data-if="cur_config_index == 4">
                         Applies a deadzone to joystick inputs.
@@ -147,6 +254,21 @@
                     </p>
                     <p data-if="cur_config_index == 9">
                         Inverts the camera controls for the analog camera if it's enabled. <b>None</b> is the default.
+                    </p>
+                    <p data-if="cur_config_index == 12">
+                        Horizontal field of view in <b>First Person</b>. Third person keeps the game's own, about <b>49°</b>.
+                    </p>
+                    <p data-if="cur_config_index == 11">
+                        In <b>First Person</b> with the <b>Mouse Camera</b>, moving left or right strafes sideways like a classic shooter instead of turning, since the mouse already turns Mega Man. <b>Off</b> keeps the original turning controls.
+                    </p>
+                    <p data-if="cur_config_index == 10">
+                        Play with mouse look. <b>First Person</b> puts the camera at Mega Man's eyes: the mouse turns him and tilts the view, shots follow the crosshair and a light aim assist helps near enemies. <b>Third Person</b> orbits the camera freely around him and he walks where the camera points; hold the <b>right mouse button</b> to aim over his shoulder and use the <b>mouse wheel</b> to zoom.
+                        <br />
+                        <br />
+                        Click the <b>middle mouse button</b> in game to swap between first and third person. If no mouse buttons are bound in the keyboard controls, <b>left click</b> fires the buster and <b>right click</b> the special weapon (in third person, a quick click; holding it aims).
+                        <br />
+                        <br />
+                        <b>Note: The cursor is captured while playing. Open the menu to release it.</b>
                     </p>
                 </div>
             </div>

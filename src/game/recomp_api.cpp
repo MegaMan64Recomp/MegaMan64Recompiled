@@ -58,6 +58,29 @@ extern "C" void recomp_get_mouse_deltas(uint8_t* rdram, recomp_context* ctx) {
     recomp::get_mouse_deltas(x_out, y_out);
 }
 
+extern "C" void recomp_get_mouse_camera_mode(uint8_t* rdram, recomp_context* ctx) {
+    _return<s32>(ctx, static_cast<s32>(zelda64::get_mouse_camera_mode()));
+}
+
+extern "C" void recomp_get_mouse_camera_fov(uint8_t* rdram, recomp_context* ctx) {
+    _return<s32>(ctx, zelda64::get_mouse_camera_fov());
+}
+
+extern "C" void recomp_get_mouse_camera_aim(uint8_t* rdram, recomp_context* ctx) {
+    _return<s32>(ctx, recomp::get_mouse_camera_aim_held() ? 1 : 0);
+}
+
+extern "C" void recomp_get_mouse_camera_wheel(uint8_t* rdram, recomp_context* ctx) {
+    _return<s32>(ctx, recomp::consume_mouse_camera_wheel());
+}
+
+extern "C" void recomp_get_mouse_camera_deltas(uint8_t* rdram, recomp_context* ctx) {
+    float* x_out = _arg<0, float*>(rdram, ctx);
+    float* y_out = _arg<1, float*>(rdram, ctx);
+
+    recomp::consume_mouse_camera_deltas(x_out, y_out);
+}
+
 extern "C" void recomp_powf(uint8_t* rdram, recomp_context* ctx) {
     float a = _arg<0, float>(rdram, ctx);
     float b = ctx->f14.fl; //_arg<1, float>(rdram, ctx);

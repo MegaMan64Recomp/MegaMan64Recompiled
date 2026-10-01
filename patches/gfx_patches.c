@@ -2,6 +2,7 @@
 #include "common_structs.h"
 #include "tag_helper.h"
 #include "gfx_patches.h"
+#include "mouse_camera.h"
 
 bool skip_all_interpolation = FALSE;
 bool skip_terrain_interpolation = FALSE;
@@ -189,6 +190,7 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
     Vp *viewport;
     Mtx *identMtx;
     Mtx *mtxprojectionMtx;
+    u16 perspNorm;
     s32 width;
     u32 zbuffer;
     s32 unkMtx;
@@ -287,10 +289,13 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
                     memcpy(viewport, &gfxContext->viewport, 0x10);
                     memcpy(mtxprojectionMtx, &gfxContext->projectionMtx, 0x40);
                     memcpy(identMtx, &gfxContext->identMtx, 0x40);
-                    memcpy(&D_801AF370_18A770, &gfxContext->projectionMtx, 0x40);
+                    //@recomp Apply the mouse camera's field of view and near plane.
+                    perspNorm = gfxContext->perspNorm;
+                    mouse_camera_adjust_projection(mtxprojectionMtx, &perspNorm);
+                    memcpy(&D_801AF370_18A770, mtxprojectionMtx, 0x40);
 
                     gSPViewport(D_801A90F0_1844F0++, viewport);
-                    gSPPerspNormalize(D_801A90F0_1844F0++, gfxContext->perspNorm);
+                    gSPPerspNormalize(D_801A90F0_1844F0++, perspNorm);
                     gSPMatrix(D_801A90F0_1844F0++, mtxprojectionMtx, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
                     gSPMatrix(D_801A90F0_1844F0++, identMtx, G_MTX_PROJECTION | G_MTX_MUL | G_MTX_NOPUSH);
 
@@ -342,6 +347,8 @@ RECOMP_PATCH void func_800276EC_2AEC(s32 arg0) {
 
                         poolNum += 1;
                     } while (poolNum < 16);
+                    //@recomp Crosshair for the first person mouse camera, on top of the world and HUD.
+                    mouse_camera_draw_crosshair();
                     if (gfxContext->rgba.c.a != 0) {
                         gSPDisplayList(D_801A90F0_1844F0++, &D_80224F68);
                         gDPSetPrimColor(D_801A90F0_1844F0++, 0, 0, gfxContext->rgba.c.r, gfxContext->rgba.c.g,

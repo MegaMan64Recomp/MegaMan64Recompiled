@@ -100,13 +100,41 @@ text= """
 	}
 	"""
 
-#Tagging - MegaMan Body
+#Tagging - MegaMan Body, one tag per part so each part interpolates against itself
 [[patches.hook]]
 func = "func_80084870_5FC70"
 before_vram = 0x80084960
 text =  """
-		ctx->r4 = 0x4D454743;
-		set_curr_gfx_tag(rdram, ctx);
+	{
+		recomp_context savedCtx = *ctx;
+		set_megaman_part_gfx_tag(rdram, ctx);
+		*ctx = savedCtx;
+	}
+		"""
+
+#Mouse camera - Camera relative movement for the free third person camera, right after Mega Man copies the pad
+[[patches.hook]]
+func = "func_8006EF7C_4A37C"
+before_vram = 0x8006F094
+text =  """
+	{
+		recomp_context savedCtx = *ctx;
+		mouse_camera_player_input(rdram, ctx);
+		*ctx = savedCtx;
+	}
+		"""
+
+#Mouse camera - Hitmarker when a flying buster shot ends on an enemy ($s1 is the shot). Enemies mark the shots that hit
+# them in the top byte of 0xC8; the collision pass leaves other entities it touched at 0x7C.
+[[patches.hook]]
+func = "func_8007BA60_56E60"
+before_vram = 0x8007BAA8
+text =  """
+	if (((MEM_W(0xC8, ctx->r17) & 0xFF000000) != 0) || (MEM_H(0x7C, ctx->r17) != 0)) {
+		recomp_context savedCtx = *ctx;
+		mouse_camera_register_hit(rdram, ctx);
+		*ctx = savedCtx;
+	}
 		"""
 
 #Tagging - MegaMan Face
@@ -186,3 +214,49 @@ text =	"rect_aspect_auto(rdram, ctx);"
 func = "func_8003912C_1452C"
 vram = 0x80039CDC
 value = 0x00000000 # nop
+
+# Terrain culling tests each tile's center only, and skips the screen bounds test for tiles closer than 0x80 units.
+# Tiles are 512 units wide, so with a camera near the ground (first person) the tiles right around it have centers
+# far to the side or behind while their edges are on screen, and they got culled. Widen the near range to 0x600.
+[[patches.instruction]]
+func = "func_8003912C_1452C"
+vram = 0x800397C8
+value = 0x2402FA00 # addiu $v0, $zero, -0x600
+
+[[patches.instruction]]
+func = "func_8003912C_1452C"
+vram = 0x8003980C
+value = 0x240D0600 # addiu $t5, $zero, 0x600
+
+[[patches.instruction]]
+func = "func_8003912C_1452C"
+vram = 0x80039AB4
+value = 0x240D0600 # addiu $t5, $zero, 0x600
+
+[[patches.instruction]]
+func = "func_8003912C_1452C"
+vram = 0x80039B5C
+value = 0x240D0600 # addiu $t5, $zero, 0x600
+
+[[patches.instruction]]
+func = "func_8003912C_1452C"
+vram = 0x80039C54
+value = 0x240D0600 # addiu $t5, $zero, 0x600
+
+# Close objects: these object draws skip anything whose depth in front of the camera is under ~48 units (0x30, or
+# 0xC after dividing by 4). The third person camera never gets that close, but the first person camera does, and
+# chests or save points vanished when walking up to them. Only objects behind the camera are skipped now.
+[[patches.instruction]]
+func = "func_8003A2EC_156EC"
+vram = 0x8003A3FC
+value = 0x24020001 # addiu $v0, $zero, 1
+
+[[patches.instruction]]
+func = "func_8003AB60_15F60"
+vram = 0x8003AC5C
+value = 0x24020001 # addiu $v0, $zero, 1
+
+[[patches.instruction]]
+func = "func_8003AFB0_163B0"
+vram = 0x8003B04C
+value = 0x28620001 # slti $v0, $v1, 1
