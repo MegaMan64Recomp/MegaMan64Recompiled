@@ -74,6 +74,75 @@ text= """
 	}
 	"""
 
+#Terrain seams - Grow tiles while their matrix is converted
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039B10
+text= """
+	{
+		recomp_context savedCtx = *ctx;
+		terrain_tile_matrix_begin(rdram, ctx);
+		*ctx = savedCtx;
+	}
+	"""
+
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039B18
+text= """
+	{
+		recomp_context savedCtx = *ctx;
+		terrain_tile_matrix_end(rdram, ctx);
+		*ctx = savedCtx;
+	}
+	"""
+
+#Terrain seams - Grow tiles while their matrix is converted
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039C10
+text= """
+	{
+		recomp_context savedCtx = *ctx;
+		terrain_tile_matrix_begin(rdram, ctx);
+		*ctx = savedCtx;
+	}
+	"""
+
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039C18
+text= """
+	{
+		recomp_context savedCtx = *ctx;
+		terrain_tile_matrix_end(rdram, ctx);
+		*ctx = savedCtx;
+	}
+	"""
+
+#Terrain seams - Grow tiles while their matrix is converted
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039D1C
+text= """
+	{
+		recomp_context savedCtx = *ctx;
+		terrain_tile_matrix_begin(rdram, ctx);
+		*ctx = savedCtx;
+	}
+	"""
+
+[[patches.hook]]
+func = "func_8003912C_1452C"
+before_vram = 0x80039D24
+text= """
+	{
+		recomp_context savedCtx = *ctx;
+		terrain_tile_matrix_end(rdram, ctx);
+		*ctx = savedCtx;
+	}
+	"""
+
 #Tagging - Terrain Transparent
 [[patches.hook]]
 func = "func_8007E8D4_59CD4"
